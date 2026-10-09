@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Runesmith.Git.Contracts/Runesmith.Git.Contracts.csproj" />
+    <Project Path="src/Runesmith.Git/Runesmith.Git.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Runesmith.Git.Tests/Runesmith.Git.Tests.csproj" />
+  </Folder>
+</Solution>
