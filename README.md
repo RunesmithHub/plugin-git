@@ -5,7 +5,7 @@ pull and push, the log and its graph, diffs, change markers in the editor, cloni
 the `git` command line, so your configuration, hooks, signing keys, SSH setup and credential helpers keep working. Hosting services such as
 GitHub, Gitea and Forgejo are plugins on top of it.
 
-The [Git documentation](https://runesmithhub.github.io/Runesmith/plugins/git) describes each part and its settings.
+The [Git documentation](https://docs.runesmith.dev/plugins/git) describes each part and its settings.
 
 ## Capabilities
 
@@ -31,7 +31,7 @@ dotnet build src/Runesmith.Git -t:InstallPlugin
 ```
 
 `InstallPlugin` copies the built plugin into your Runesmith plugins folder; restart Runesmith to load it. [CONTRIBUTING.md](CONTRIBUTING.md)
-has the checks a change must pass, and the [Runesmith documentation](https://runesmithhub.github.io/Runesmith/) covers writing plugins.
+has the checks a change must pass, and the [Runesmith documentation](https://docs.runesmith.dev/) covers writing plugins.
 
 ## License
 

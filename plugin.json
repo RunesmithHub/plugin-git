@@ -9,7 +9,7 @@
   ],
   "license": "Apache-2.0",
   "repository": "https://github.com/RunesmithHub/plugin-git",
-  "homepage": "https://runesmithhub.github.io/Runesmith/plugins/git",
+  "homepage": "https://docs.runesmith.dev/plugins/git",
   "runesmithApi": "^0.1.0",
   "projects": {
     "contracts": "src/Runesmith.Git.Contracts/Runesmith.Git.Contracts.csproj",
