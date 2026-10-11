@@ -2,6 +2,7 @@ using Runesmith.Git.Git;
 using Runesmith.Git.Repositories;
 using Runesmith.Git.Tests.Git;
 using Runesmith.Sdk.Messaging;
+using Runesmith.Sdk.Workspace;
 
 namespace Runesmith.Git.Tests.Repositories;
 
@@ -45,16 +46,23 @@ public sealed class RepositoryServiceTests
         try
         {
             var workspace = new FakeWorkspace();
-            using var service = new RepositoryService(workspace, null, null, action => action(), Debounce);
+            var files = new FakeWorkspaceFiles();
+            using var service = new RepositoryService(workspace, null, null, action => action(), Debounce, files);
             workspace.Open(folder);
             await service.Opened;
             Assert.Null(service.Current);
+            Assert.Equal([folder], files.Folders);
 
             await GitRepository.InitAsync(folder, Token);
+            files.Report(new FileChangeEvent(FileChangeKind.Created, Path.Combine(folder, "nested", ".git")));
+            Assert.Null(service.Current);
+            files.Report(new FileChangeEvent(FileChangeKind.Created, Path.Combine(folder, ".git")));
 
             await WaitUntilAsync(() => service.Current is not null);
             Assert.Equal(Path.GetFullPath(folder), service.Current!.Root);
             Assert.Null(service.Current.Head);
+            Assert.Equal([Path.Combine(Path.GetFullPath(folder), ".git")], files.Folders);
+            Assert.All(files.Options, options => Assert.True(options.IncludeExcluded));
         }
         finally
         {
@@ -92,9 +100,11 @@ public sealed class RepositoryServiceTests
         using var temp = await TempRepository.CreateAsync();
         await temp.CommitFileAsync("a.txt", "a", "first");
         var workspace = new FakeWorkspace();
-        using var service = new RepositoryService(workspace, null, null, action => action(), Debounce);
+        var files = new FakeWorkspaceFiles();
+        using var service = new RepositoryService(workspace, null, null, action => action(), Debounce, files);
         workspace.Open(temp.Path);
         await service.Opened;
+        var git = service.Repository!.GitDirectory;
         var headMoves = 0;
         var indexChanges = 0;
         service.HeadMoved += (_, _) => Interlocked.Increment(ref headMoves);
@@ -102,12 +112,50 @@ public sealed class RepositoryServiceTests
 
         temp.Write("a.txt", "changed");
         await temp.GitAsync("add", "a.txt");
+        files.Changed(Path.Combine(git, "index.lock"));
+        Assert.Equal(0, Volatile.Read(ref indexChanges));
+        files.Changed(Path.Combine(git, "index"));
         await WaitUntilAsync(() => service.Status?.Staged.Any() == true);
 
         await temp.GitAsync("commit", "--quiet", "-m", "second");
+        files.Changed(Path.Combine(git, "refs", "heads", "main"));
         await WaitUntilAsync(() => Volatile.Read(ref headMoves) > 0);
         Assert.Empty(service.Status!.Entries);
-        Assert.True(Volatile.Read(ref indexChanges) > 0);
+        Assert.Equal(1, Volatile.Read(ref indexChanges));
+    }
+
+    [Fact]
+    public void OnlyTheFilesThatChangeTheStatusCount()
+    {
+        var git = Path.Combine(Path.GetTempPath(), "repository", ".git");
+        static FileChangeEvent[] Changes(string folder, params string[] names) => [.. names.Select(n => new FileChangeEvent(FileChangeKind.Changed, Path.Combine(folder, n)))];
+
+        Assert.Equal((false, false), RepositoryWatcher.Classify(git, Changes(git, "index.lock", "COMMIT_EDITMSG", "objects/ab/cdef", "logs/HEAD", "modules/sub/index")));
+        Assert.Equal((true, true), RepositoryWatcher.Classify(git, Changes(git, "HEAD")));
+        Assert.Equal((true, true), RepositoryWatcher.Classify(git, Changes(git, "objects/ab/cdef", "index")));
+        Assert.Equal((true, false), RepositoryWatcher.Classify(git, Changes(git, "refs/remotes/origin/main")));
+        Assert.Equal((true, false), RepositoryWatcher.Classify(git, Changes(git, "MERGE_HEAD")));
+        Assert.Equal((true, false), RepositoryWatcher.Classify(git, Changes(git, "rebase-merge/done")));
+        Assert.Equal((false, false), RepositoryWatcher.Classify(git, Changes(git, "refs/heads/main.lock")));
+        Assert.Equal((true, true), RepositoryWatcher.Classify(git, [new FileChangeEvent(FileChangeKind.Rescan, git)]));
+    }
+
+    [Fact]
+    public async Task StopsWatchingAFolderThatIsClosed()
+    {
+        using var temp = await TempRepository.CreateAsync();
+        await temp.CommitFileAsync("a.txt", "a", "first");
+        var workspace = new FakeWorkspace();
+        var files = new FakeWorkspaceFiles();
+        using var service = new RepositoryService(workspace, null, null, action => action(), Debounce, files);
+        workspace.Open(temp.Path);
+        await service.Opened;
+        Assert.Single(files.Folders);
+
+        workspace.Open(null);
+        await service.Opened;
+
+        Assert.Empty(files.Folders);
     }
 
     [Fact]

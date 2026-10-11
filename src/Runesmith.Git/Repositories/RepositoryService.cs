@@ -19,6 +19,7 @@ internal sealed class RepositoryService : IRepositoryService, IDisposable
 
     private readonly IWorkspace workspace;
     private readonly GitCredentialResolver? credentials;
+    private readonly IWorkspaceFiles? files;
     private readonly Action<Action> post;
     private readonly TimeSpan debounce;
     private readonly SemaphoreSlim refreshing = new(1, 1);
@@ -34,16 +35,18 @@ internal sealed class RepositoryService : IRepositoryService, IDisposable
 
     /// <summary>Creates the service for Runesmith, raising <see cref="Changed"/> on the UI thread.</summary>
     [ImportingConstructor]
-    public RepositoryService(IWorkspace workspace, IMessageBus messageBus, GitCredentialResolver credentials)
-        : this(workspace, messageBus, credentials, action => Dispatcher.UIThread.Post(action), DefaultDebounce)
+    public RepositoryService(IWorkspace workspace, IMessageBus messageBus, GitCredentialResolver credentials, [Import(AllowDefault = true)] IWorkspaceFiles? files)
+        : this(workspace, messageBus, credentials, action => Dispatcher.UIThread.Post(action), DefaultDebounce, files)
     {
     }
 
     /// <summary>Creates the service with the way it reaches the UI thread and its debounce delay, for tests.</summary>
-    internal RepositoryService(IWorkspace workspace, IMessageBus? messageBus, GitCredentialResolver? credentials, Action<Action> post, TimeSpan debounce)
+    internal RepositoryService(IWorkspace workspace, IMessageBus? messageBus, GitCredentialResolver? credentials, Action<Action> post, TimeSpan debounce,
+        IWorkspaceFiles? files = null)
     {
         this.workspace = workspace;
         this.credentials = credentials;
+        this.files = files;
         this.post = post;
         this.debounce = debounce;
         debounceTimer = new Timer(_ => _ = RefreshQuietlyAsync(), null, Timeout.Infinite, Timeout.Infinite);
@@ -154,7 +157,7 @@ internal sealed class RepositoryService : IRepositoryService, IDisposable
             Publish(null);
             if (root is not null && Directory.Exists(root))
             {
-                ReplaceWatcher(RepositoryWatcher.ForMissingRepository(root, () => _ = ReopenAsync()));
+                ReplaceWatcher(files is null ? null : RepositoryWatcher.ForMissingRepository(files, root, () => _ = ReopenAsync()));
                 // A .git that is not a repository yet is usually one git is still writing, which the folder watcher will not report again.
                 if (Path.Exists(Path.Combine(root, ".git")) && unfinishedRetries++ < UnfinishedRepositoryRetries)
                     _ = ReopenAfterDebounceAsync(cancellationToken);
@@ -166,7 +169,7 @@ internal sealed class RepositoryService : IRepositoryService, IDisposable
         unfinishedRetries = 0;
 
         repository.Running += (_, arguments) => CommandRunning?.Invoke(this, arguments);
-        ReplaceWatcher(new RepositoryWatcher(repository.GitDirectory, ScheduleRefresh, () => IndexChanged?.Invoke(this, EventArgs.Empty)));
+        ReplaceWatcher(files is null ? null : new RepositoryWatcher(files, repository.GitDirectory, ScheduleRefresh, () => IndexChanged?.Invoke(this, EventArgs.Empty)));
         await RefreshQuietlyAsync().ConfigureAwait(false);
     }
 

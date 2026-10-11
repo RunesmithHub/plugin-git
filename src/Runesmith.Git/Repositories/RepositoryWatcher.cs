@@ -1,7 +1,10 @@
+using Runesmith.Sdk.Workspace;
+
 namespace Runesmith.Git.Repositories;
 
-/// <summary>Watches a repository's Git folder for the files whose changes change its status: the index, HEAD, the references and the
-/// configuration. Changes to the working tree come from the workspace's own watcher.</summary>
+/// <summary>Follows a repository's Git folder for the files whose changes change its status: the index, HEAD, the references and the
+/// configuration. Changes to the working tree come from the workspace itself.</summary>
+/// <remarks>The changes come from Runesmith's file watcher, which watches the open folder once for everyone.</remarks>
 internal sealed class RepositoryWatcher : IDisposable
 {
     private static readonly HashSet<string> TopFiles = new(StringComparer.Ordinal)
@@ -9,77 +12,86 @@ internal sealed class RepositoryWatcher : IDisposable
         "index", "HEAD", "packed-refs", "config", "MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "ORIG_HEAD", "FETCH_HEAD",
     };
 
-    private readonly List<FileSystemWatcher> watchers = [];
+    private static readonly string[] StatusGlobs = [.. TopFiles, "rebase-*", "rebase-*/**", "refs/**"];
 
-    /// <summary>Starts watching a Git folder.</summary>
-    /// <param name="changed">Called, on any thread, when something that changes the status changed.</param>
-    /// <param name="indexChanged">Called, on any thread, when the index or HEAD changed.</param>
-    public RepositoryWatcher(string gitDirectory, Action changed, Action indexChanged)
+    private IFileWatcher? watcher;
+
+    /// <summary>Starts following a Git folder.</summary>
+    /// <param name="changed">Called, on a background thread, when something that changes the status changed.</param>
+    /// <param name="indexChanged">Called, on a background thread, when the index or HEAD changed.</param>
+    public RepositoryWatcher(IWorkspaceFiles files, string gitDirectory, Action changed, Action indexChanged)
     {
-        Add(gitDirectory, recursive: false, name =>
+        watcher = Watch(files, gitDirectory, StatusGlobs, events =>
         {
-            if (TopFiles.Contains(name) || name.StartsWith("rebase-", StringComparison.Ordinal))
-            {
+            var (status, index) = Classify(gitDirectory, events);
+            if (status)
                 changed();
-                if (name is "index" or "HEAD")
-                    indexChanged();
-            }
+            if (index)
+                indexChanged();
         });
-        var refs = Path.Combine(gitDirectory, "refs");
-        if (Directory.Exists(refs))
-            Add(refs, recursive: true, name => changed());
     }
 
     private RepositoryWatcher()
     {
     }
 
-    /// <summary>Watches a folder that is not a repository for a <c>.git</c> to appear in it, such as from <c>git init</c> in a terminal.</summary>
-    public static RepositoryWatcher ForMissingRepository(string folder, Action created)
+    /// <summary>Follows a folder that is not a repository for a <c>.git</c> to appear in it, such as from <c>git init</c> in a terminal.</summary>
+    public static RepositoryWatcher ForMissingRepository(IWorkspaceFiles files, string folder, Action created)
     {
-        var watcher = new RepositoryWatcher();
-        watcher.Add(folder, recursive: false, name =>
+        var expected = Path.Combine(folder, ".git");
+        return new RepositoryWatcher
         {
-            if (name == ".git")
-                created();
-        });
-        return watcher;
+            watcher = Watch(files, folder, [".git"], events =>
+            {
+                if (events.Any(e => e.Kind == FileChangeKind.Rescan || (e.Kind != FileChangeKind.Deleted && SamePath(e.Path, expected))))
+                    created();
+            }),
+        };
+    }
+
+    /// <summary>Says whether a batch of changes in a Git folder changes the repository's status, and whether the index or HEAD changed.</summary>
+    internal static (bool Status, bool Index) Classify(string gitDirectory, IReadOnlyList<FileChangeEvent> events)
+    {
+        var (status, index) = (false, false);
+        foreach (var change in events)
+        {
+            if (change.Kind == FileChangeKind.Rescan)
+                return (true, true);
+
+            // Git writes each of these files as a .lock file first, which says nothing until it is renamed.
+            var name = Path.GetRelativePath(gitDirectory, change.Path).Replace('\\', '/');
+            if (name.EndsWith(".lock", StringComparison.Ordinal))
+                continue;
+
+            if (TopFiles.Contains(name) || name.StartsWith("rebase-", StringComparison.Ordinal) || name.StartsWith("refs/", StringComparison.Ordinal))
+            {
+                status = true;
+                index |= name is "index" or "HEAD";
+            }
+        }
+
+        return (status, index);
     }
 
     public void Dispose()
     {
-        foreach (var watcher in watchers)
-            watcher.Dispose();
-        watchers.Clear();
+        watcher?.Dispose();
+        watcher = null;
     }
 
-    private void Add(string folder, bool recursive, Action<string> onChange)
+    private static IFileWatcher? Watch(IWorkspaceFiles files, string folder, IReadOnlyList<string> globs, Action<IReadOnlyList<FileChangeEvent>> onChanged)
     {
         try
         {
-            var watcher = new FileSystemWatcher(folder)
-            {
-                IncludeSubdirectories = recursive,
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size,
-            };
-            void Handle(string? path)
-            {
-                if (path is null)
-                    return;
-                var name = recursive ? Path.GetRelativePath(folder, path) : Path.GetFileName(path);
-                if (!name.EndsWith(".lock", StringComparison.Ordinal))
-                    onChange(name);
-            }
-
-            watcher.Changed += (_, e) => Handle(e.FullPath);
-            watcher.Created += (_, e) => Handle(e.FullPath);
-            watcher.Deleted += (_, e) => Handle(e.FullPath);
-            watcher.Renamed += (_, e) => Handle(e.FullPath);
-            watcher.EnableRaisingEvents = true;
-            watchers.Add(watcher);
+            // The Git folder is among the files Runesmith leaves out of the workspace.
+            return files.Watch(globs, onChanged, new FileWatchOptions { Folder = folder, IncludeExcluded = true });
         }
         catch (Exception exception) when (exception is IOException or ArgumentException or UnauthorizedAccessException)
         {
+            return null;
         }
     }
+
+    private static bool SamePath(string left, string right) =>
+        string.Equals(Path.TrimEndingDirectorySeparator(left), Path.TrimEndingDirectorySeparator(right), OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
 }
