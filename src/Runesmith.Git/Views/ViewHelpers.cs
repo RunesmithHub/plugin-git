@@ -99,14 +99,12 @@ internal static class ViewHelpers
             return "";
 
         var span = now - time;
-        return span.TotalMinutes < 1 ? "just now"
-            : span.TotalHours < 1 ? Plural((int)span.TotalMinutes, "minute")
-            : span.TotalDays < 1 ? Plural((int)span.TotalHours, "hour")
-            : span.TotalDays < 30 ? Plural((int)span.TotalDays, "day")
-            : span.TotalDays < 365 ? Plural((int)(span.TotalDays / 30), "month")
-            : Plural((int)(span.TotalDays / 365), "year");
-
-        static string Plural(int count, string unit) => FormattableString.Invariant($"{count} {unit}{(count == 1 ? "" : "s")} ago");
+        return span.TotalMinutes < 1 ? Strings.TimeJustNow
+            : span.TotalHours < 1 ? Strings.TimeMinutesAgo((int)span.TotalMinutes)
+            : span.TotalDays < 1 ? Strings.TimeHoursAgo((int)span.TotalHours)
+            : span.TotalDays < 30 ? Strings.TimeDaysAgo((int)span.TotalDays)
+            : span.TotalDays < 365 ? Strings.TimeMonthsAgo((int)(span.TotalDays / 30))
+            : Strings.TimeYearsAgo((int)(span.TotalDays / 365));
     }
 
     /// <summary>Gets a count in the short form lists use, such as 1.2k.</summary>

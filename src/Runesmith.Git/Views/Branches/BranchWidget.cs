@@ -42,6 +42,9 @@ internal sealed class BranchWidget : Button
 {
     private readonly RepositoryService repositories;
     private readonly TextBlock name = new() { FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center, MaxWidth = 220, TextTrimming = TextTrimming.CharacterEllipsis };
+    // Git's own name for where the repository is, which no language translates.
+    private const string Head = "HEAD";
+
     private readonly TextBlock incoming = new() { Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center, FontWeight = FontWeight.SemiBold };
     private readonly TextBlock outgoing = new() { Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center, FontWeight = FontWeight.SemiBold };
     private readonly Border badge;
@@ -99,7 +102,7 @@ internal sealed class BranchWidget : Button
         if (info is null)
             return;
 
-        name.Text = info.Branch ?? (info.Head is { } head ? head[..Math.Min(8, head.Length)] : "HEAD");
+        name.Text = info.Branch ?? (info.Head is { } head ? head[..Math.Min(8, head.Length)] : Head);
         incoming.Text = info.Behind > 0 ? $"↓{info.Behind}" : "";
         outgoing.Text = info.Ahead > 0 ? $"↑{info.Ahead}" : "";
         incoming.IsVisible = info.Behind > 0;
@@ -113,20 +116,20 @@ internal sealed class BranchWidget : Button
     {
         ArgumentNullException.ThrowIfNull(info);
         if (info.Branch is null)
-            return info.Head is { } head ? $"HEAD is detached at {head[..Math.Min(8, head.Length)]}" : "HEAD is detached";
+            return info.Head is { } head ? Strings.BranchDetachedAt(head[..Math.Min(8, head.Length)]) : Strings.HeadDetached;
 
-        var lines = new List<string> { $"Branch {info.Branch}" };
+        var lines = new List<string> { Strings.BranchName(info.Branch) };
         if (info.Upstream is null)
-            lines.Add("Not tracking a remote branch; pushing sets one");
+            lines.Add(Strings.BranchNotTracking);
         else if (info.Ahead == 0 && info.Behind == 0)
-            lines.Add($"Up to date with {info.Upstream}");
+            lines.Add(Strings.BranchUpToDate(info.Upstream));
         else
         {
-            lines.Add($"Tracking {info.Upstream}");
+            lines.Add(Strings.BranchTracking(info.Upstream));
             if (info.Behind > 0)
-                lines.Add($"{GitOperations.Commits(info.Behind)} to pull");
+                lines.Add(Strings.FetchBehind(info.Behind));
             if (info.Ahead > 0)
-                lines.Add($"{GitOperations.Commits(info.Ahead)} to push");
+                lines.Add(Strings.CommitsToPush(info.Ahead));
         }
 
         return string.Join('\n', lines);

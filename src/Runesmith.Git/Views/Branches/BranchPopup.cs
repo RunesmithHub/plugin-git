@@ -26,7 +26,7 @@ internal sealed class BranchPopup : Border
     private readonly RepositoryService repositories;
     private readonly ICommandService commands;
     private readonly Action close;
-    private readonly SearchBox search = new() { PlaceholderText = "Search branches and actions" };
+    private readonly SearchBox search = new() { PlaceholderText = Strings.BranchesSearch };
     private readonly ListBox list;
     private IReadOnlyList<GitRef> refs = [];
     private IReadOnlyList<string> recent = [];
@@ -106,11 +106,11 @@ internal sealed class BranchPopup : Border
     {
         var actions = new List<ActionRow>
         {
-            new("Update Project...", GitIcons.Pull, GitCommands.Pull),
-            new("Commit...", GitIcons.Commit, GitCommands.Commit),
-            new("Push...", GitIcons.Push, GitCommands.Push),
-            new("New Branch...", "plus", GitCommands.NewBranch),
-            new("Fetch", GitIcons.Fetch, GitCommands.Fetch),
+            new(Strings.PopupUpdateProject, GitIcons.Pull, GitCommands.Pull),
+            new(Strings.CommandCommit, GitIcons.Commit, GitCommands.Commit),
+            new(Strings.CommandPush, GitIcons.Push, GitCommands.Push),
+            new(Strings.CommandNewBranch, "plus", GitCommands.NewBranch),
+            new(Strings.CommandFetch, GitIcons.Fetch, GitCommands.Fetch),
         };
         var rows = BranchRows.Build(actions, refs, recent, search.Text);
         list.ItemsSource = rows;
@@ -159,7 +159,7 @@ internal sealed class BranchPopup : Border
         };
         var sync = new TextBlock { Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 4, 0) };
         sync[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMutedBrush");
-        sync.Text = branch.IsUpstreamGone ? "gone" : Sync(branch.Ahead, branch.Behind);
+        sync.Text = branch.IsUpstreamGone ? Strings.BranchGone : Sync(branch.Ahead, branch.Behind);
         var chevron = new SymbolIcon { Data = Icons.ChevronRight, Size = 12, VerticalAlignment = VerticalAlignment.Center };
         chevron[!SymbolIcon.ForegroundProperty] = new DynamicResourceExtension("TextMutedBrush");
         Grid.SetColumn(name, 1);
@@ -168,10 +168,10 @@ internal sealed class BranchPopup : Border
         grid.Children.AddRange([icon, name, sync, chevron]);
         var tip = branch.Kind switch
         {
-            RefKind.LocalBranch when branch.Upstream is { } upstream => $"{branch.Name}, tracking {upstream}" + (branch.IsUpstreamGone ? " (deleted on the remote)" : ""),
-            RefKind.LocalBranch => $"{branch.Name}, not tracking a remote branch",
-            RefKind.RemoteBranch => $"{branch.BranchName} on {branch.Remote}",
-            _ => $"Tag {branch.Name}",
+            RefKind.LocalBranch when branch.Upstream is { } upstream => branch.IsUpstreamGone ? Strings.BranchTipTrackingGone(branch: branch.Name, upstream: upstream) : Strings.BranchTipTracking(branch: branch.Name, upstream: upstream),
+            RefKind.LocalBranch => Strings.BranchTipNotTracking(branch.Name),
+            RefKind.RemoteBranch => Strings.BranchTipRemote(branch: branch.BranchName, remote: branch.Remote ?? ""),
+            _ => Strings.BranchTipTag(branch.Name),
         };
         ToolTip.SetTip(grid, branch.Subject.Length > 0 ? $"{tip}\n{branch.Subject}" : tip);
         return grid;
@@ -214,35 +214,35 @@ internal sealed class BranchPopup : Border
 
         var current = repositories.Current?.Branch ?? "HEAD";
         if (!branch.IsHead)
-            Add("Checkout", "check", () => operations.CheckoutAsync(branch));
-        Add($"New Branch from {branch.Name}...", "plus", () => operations.NewBranchAsync(branch.FullName, branch.Name, branch.Kind == RefKind.RemoteBranch ? branch.BranchName : ""));
+            Add(Strings.MenuCheckout, "check", () => operations.CheckoutAsync(branch));
+        Add(Strings.MenuNewBranchFrom(branch.Name), "plus", () => operations.NewBranchAsync(branch.FullName, branch.Name, branch.Kind == RefKind.RemoteBranch ? branch.BranchName : ""));
         if (!branch.IsHead)
         {
-            Add($"Compare with {current}", "git-compare", () =>
+            Add(Strings.MenuCompareWith(current), "git-compare", () =>
             {
                 operations.Compare(branch);
                 return Task.CompletedTask;
             });
-            Add($"Merge into {current}", GitIcons.Merge, () => operations.MergeAsync(branch));
+            Add(Strings.MenuMergeInto(current), GitIcons.Merge, () => operations.MergeAsync(branch));
         }
 
-        Add("Show History", GitIcons.History, () =>
+        Add(Strings.CommandShowHistory, GitIcons.History, () =>
         {
-            operations.ShowHistory(new Views.History.HistoryRequest(new LogQuery { Revision = branch.FullName }, $"History of {branch.Name}"));
+            operations.ShowHistory(new Views.History.HistoryRequest(new LogQuery { Revision = branch.FullName }, Strings.HistoryOfBranch(branch.Name)));
             return Task.CompletedTask;
         });
         Separator();
         switch (branch.Kind)
         {
             case RefKind.LocalBranch:
-                Add(branch.IsHead ? "Push..." : "Push", GitIcons.Push, () => operations.PushBranchAsync(branch));
-                Add("Rename...", "pen-line", () => operations.RenameBranchAsync(branch));
+                Add(branch.IsHead ? Strings.CommandPush : Strings.Push, GitIcons.Push, () => operations.PushBranchAsync(branch));
+                Add(Strings.MenuRename, "pen-line", () => operations.RenameBranchAsync(branch));
                 if (!branch.IsHead)
-                    Add("Delete", "trash", () => operations.DeleteBranchAsync(branch));
+                    Add(Strings.Delete, "trash", () => operations.DeleteBranchAsync(branch));
                 break;
             case RefKind.RemoteBranch:
-                Add("Track", GitIcons.Pull, () => operations.TrackAsync(branch));
-                Add($"Delete on {branch.Remote}", "trash", () => operations.DeleteBranchAsync(branch));
+                Add(Strings.MenuTrack, GitIcons.Pull, () => operations.TrackAsync(branch));
+                Add(Strings.MenuDeleteOn(branch.Remote ?? ""), "trash", () => operations.DeleteBranchAsync(branch));
                 break;
         }
 

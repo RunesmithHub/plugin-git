@@ -19,6 +19,7 @@ internal sealed class GitCommands(GitOperations operations, IWorkspace workspace
     public const string Fetch = "git.fetch";
     public const string NewBranch = "git.newBranch";
     public const string Branches = "git.branches";
+    public const string Checkout = "git.checkout";
     public const string ShowHistory = "git.showHistory";
     public const string FileHistory = "git.fileHistory";
     public const string ShowDiff = "git.showDiff";
@@ -53,30 +54,31 @@ internal sealed class GitCommands(GitOperations operations, IWorkspace workspace
 
         bool InRepository(object? _) => Repositories.Current is not null;
 
-        Add(Commit, "Commit...", GitIcons.Commit, "Ctrl+Alt+K", "1-commit", _ => Run(operations.ShowCommitWindow), InRepository,
-            "Show the Commit window with the message box focused.");
-        Add(Push, "Push...", GitIcons.Push, "Ctrl+Alt+Shift+K", "1-commit", _ => operations.ShowPushAsync(), InRepository,
-            "Push the current branch, showing the commits that go and where.");
-        Add(Pull, "Pull...", GitIcons.Pull, "Ctrl+T", "1-commit", _ => operations.PullAsync(), InRepository,
-            "Update the project: pull the current branch's upstream, keeping local changes.");
-        Add(Fetch, "Fetch", GitIcons.Fetch, null, "1-commit", _ => operations.FetchAsync(), InRepository, "Fetch every remote and drop remote branches deleted there.");
-        Add(NewBranch, "New Branch...", "plus", null, "2-branches", _ => operations.NewBranchAsync(), InRepository, "Create a branch at HEAD, and check it out.");
-        Add(Branches, "Branches...", GitIcons.Branch, null, "2-branches", _ => Run(OpenBranches), InRepository,
-            "Open the branch popup: check out, create, merge, rename and delete branches.");
-        Add(ShowHistory, "Show History", GitIcons.History, null, "3-history", _ => Run(operations.ShowLog), InRepository, "Show the Git window with the log and its graph.");
-        Add(FileHistory, "Show File History", GitIcons.History, null, "3-history", argument => Run(() => operations.ShowFileHistory(Target(argument)!.Path)), HasHistory,
-            "Show the commits that changed the current file, following renames.");
-        Add(ShowDiff, "Show Diff", "git-compare", null, "4-file", argument => operations.ShowFileDiffAsync(Target(argument)!.Path),
-            argument => Target(argument) is { IsDirectory: false } target && operations.Find(target.Path) is not null, "Compare the current file with its last committed version.");
-        Add(RollbackFile, "Roll Back...", "undo", null, "4-file", argument => Target(argument) is { } target ? operations.RollbackFileAsync(target.Path, target.IsDirectory) : Task.CompletedTask,
+        Add(Commit, Strings.CommandCommit, GitIcons.Commit, "Ctrl+Alt+K", "1-commit", _ => Run(operations.ShowCommitWindow), InRepository,
+            Strings.CommandCommitDescription);
+        Add(Push, Strings.CommandPush, GitIcons.Push, "Ctrl+Alt+Shift+K", "1-commit", _ => operations.ShowPushAsync(), InRepository,
+            Strings.CommandPushDescription);
+        Add(Pull, Strings.CommandPull, GitIcons.Pull, "Ctrl+T", "1-commit", _ => operations.PullAsync(), InRepository,
+            Strings.CommandPullDescription);
+        Add(Fetch, Strings.CommandFetch, GitIcons.Fetch, null, "1-commit", _ => operations.FetchAsync(), InRepository, Strings.CommandFetchDescription);
+        Add(NewBranch, Strings.CommandNewBranch, "plus", null, "2-branches", _ => operations.NewBranchAsync(), InRepository, Strings.CommandNewBranchDescription);
+        Add(Branches, Strings.CommandBranches, GitIcons.Branch, null, "2-branches", _ => Run(OpenBranches), InRepository,
+            Strings.CommandBranchesDescription);
+        Add(Checkout, Strings.CommandCheckout, GitIcons.Branch, null, "2-branches", _ => operations.PickCheckoutAsync(), InRepository, Strings.CommandCheckoutDescription);
+        Add(ShowHistory, Strings.CommandShowHistory, GitIcons.History, null, "3-history", _ => Run(operations.ShowLog), InRepository, Strings.CommandShowHistoryDescription);
+        Add(FileHistory, Strings.CommandFileHistory, GitIcons.History, null, "3-history", argument => Run(() => operations.ShowFileHistory(Target(argument)!.Path)), HasHistory,
+            Strings.CommandFileHistoryDescription);
+        Add(ShowDiff, Strings.CommandShowDiff, "git-compare", null, "4-file", argument => operations.ShowFileDiffAsync(Target(argument)!.Path),
+            argument => Target(argument) is { IsDirectory: false } target && operations.Find(target.Path) is not null, Strings.CommandShowDiffDescription);
+        Add(RollbackFile, Strings.CommandRollbackFile, "undo", null, "4-file", argument => Target(argument) is { } target ? operations.RollbackFileAsync(target.Path, target.IsDirectory) : Task.CompletedTask,
             argument => Target(argument) is { } target && operations.ChangesAt(target.Path, target.IsDirectory).Count > 0,
-            "Undo every change to the current file, or to the files of a folder, since the last commit.");
-        Add(AddToGitignore, "Add to .gitignore", "eye-off", null, "4-file", argument => operations.AddToGitignoreAsync([operations.Repositories.Repository!.RelativePath(Target(argument)!.Path)]),
-            IsUntracked, "Have Git ignore an untracked file or folder, in the repository's .gitignore.", inMenu: false);
-        Add(Stash, "Stash Changes...", null, null, "5-stash", _ => operations.StashAsync(), InRepository, "Put every local change aside, untracked files included.");
-        Add(Unstash, "Unstash Changes...", null, null, "5-stash", _ => operations.UnstashAsync(), InRepository, "Bring back changes put aside with Stash Changes.");
-        Add(Initialize, "Initialize Repository", GitIcons.Branch, null, "6-repository", _ => operations.InitializeAsync(),
-            _ => workspace.RootPath is not null && Repositories.Current is null && Repositories.Opened.IsCompleted, "Make the open folder a Git repository.");
+            Strings.CommandRollbackFileDescription);
+        Add(AddToGitignore, Strings.CommandAddToGitignore, "eye-off", null, "4-file", argument => operations.AddToGitignoreAsync([operations.Repositories.Repository!.RelativePath(Target(argument)!.Path)]),
+            IsUntracked, Strings.CommandAddToGitignoreDescription, inMenu: false);
+        Add(Stash, Strings.CommandStash, null, null, "5-stash", _ => operations.StashAsync(), InRepository, Strings.CommandStashDescription);
+        Add(Unstash, Strings.CommandUnstash, null, null, "5-stash", _ => operations.UnstashAsync(), InRepository, Strings.CommandUnstashDescription);
+        Add(Initialize, Strings.CommandInitialize, GitIcons.Branch, null, "6-repository", _ => operations.InitializeAsync(),
+            _ => workspace.RootPath is not null && Repositories.Current is null && Repositories.Opened.IsCompleted, Strings.CommandInitializeDescription);
 
         // The editor already offers its own Show Changes against the same base.
         string[] editor = [CommandIds.RollbackLines, FileHistory];

@@ -10,6 +10,7 @@ using HammerUI;
 using HammerUI.Controls;
 using Runesmith.Git.Commands;
 using Runesmith.Git.Hosting;
+using Runesmith.Sdk.Localization;
 using Runesmith.Sdk.ToolWindows;
 using Runesmith.Sdk.VersionControl;
 using static Runesmith.Git.Views.ViewHelpers;
@@ -27,14 +28,14 @@ internal sealed class PullRequestsToolWindow(
 {
     public const string Id = "git.pullRequests";
 
-    public ToolWindowDefinition Definition { get; } = Create();
+    public ToolWindowDefinition Definition => Create();
 
     public Control CreateContent() => new PullRequestsView(service, actions, avatars, toolWindows);
 
     private static ToolWindowDefinition Create()
     {
         GitIcons.Register();
-        return new ToolWindowDefinition(Id, "Pull Requests", GitIcons.PullRequest, DockSide.Right) { Order = 20 };
+        return new ToolWindowDefinition(Id, Strings.WindowPullRequests, GitIcons.PullRequest, DockSide.Right) { Order = 20 };
     }
 }
 
@@ -59,8 +60,8 @@ internal sealed class PullRequestsView : DockPanel
         this.avatars = avatars;
         this.toolWindows = toolWindows;
         GitIcons.Register();
-        ToolTip.SetTip(refresh, "Refresh");
-        ToolTip.SetTip(create, "Create Pull Request...");
+        refresh.Localize(ToolTip.TipProperty, () => Strings.Refresh);
+        create.Localize(ToolTip.TipProperty, () => Strings.CommandCreatePullRequest);
         refresh.Click += (_, _) => _ = LoadAsync(force: true);
         create.Click += (_, _) => _ = actions.CreateAsync();
         actions.Created += (_, _) => _ = LoadAsync(force: true);
@@ -92,7 +93,7 @@ internal sealed class PullRequestsView : DockPanel
         var current = ++generation;
         var context = model.Context;
         repositoryName.Text = context is null ? "" : WebLinks.RepositoryName(context.Remote.FetchUrl);
-        ToolTip.SetTip(repositoryName, context is null ? null : $"{WebLinks.RepositoryName(context.Remote.FetchUrl)} on {context.Host.Name}");
+        ToolTip.SetTip(repositoryName, context is null ? null : Strings.PrRepositoryOn(repository: WebLinks.RepositoryName(context.Remote.FetchUrl), host: context.Host.Name));
         create.IsVisible = refresh.IsVisible = context is { Host.Account: not null };
 
         var state = model.Ready(force);
@@ -108,24 +109,24 @@ internal sealed class PullRequestsView : DockPanel
         switch (state)
         {
             case NotHostedState notHosted:
-                Show(null, Empty(GitIcons.Get(GitIcons.PullRequest), "No hosted repository",
-                    notHosted.HasRepository ? "This repository has no remote on a hosting service Runesmith knows." : "Open a folder that is a Git repository with a remote on a hosting service, such as GitHub.",
+                Show(null, Empty(GitIcons.Get(GitIcons.PullRequest), Strings.PrNoHostedRepository,
+                    notHosted.HasRepository ? Strings.PrNoRemoteHosted : Strings.PrNoHostedRepositoryHint,
                     null, null));
                 SetBadge(null);
                 break;
             case SignedOutState signedOut:
-                Show(null, Empty(GitIcons.Get(signedOut.Host.Icon), "Sign in to see pull requests", $"Pull requests, their reviews and checks come from your {signedOut.Host.Name} account.",
-                    $"Sign in to {signedOut.Host.Name}", () => _ = PullRequestActions.SignInAsync(signedOut.Host)));
+                Show(null, Empty(GitIcons.Get(signedOut.Host.Icon), Strings.PrSignIn, Strings.PrSignInHint(signedOut.Host.Name),
+                    Strings.SignInTo(signedOut.Host.Name), () => _ = PullRequestActions.SignInAsync(signedOut.Host)));
                 SetBadge(null);
                 break;
             case LoadedState loaded:
                 Show(loaded.Items, loaded.Items.Count == 0
-                    ? Empty(GitIcons.Get(GitIcons.PullRequest), "No open pull requests", "Pull requests for this repository show here.", "Create Pull Request...", () => _ = actions.CreateAsync())
+                    ? Empty(GitIcons.Get(GitIcons.PullRequest), Strings.PrNone, Strings.PrNoneHint, Strings.CommandCreatePullRequest, () => _ = actions.CreateAsync())
                     : null);
                 SetBadge(loaded.Items.Count > 0 ? loaded.Items.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) : null);
                 break;
             case FailedState failed:
-                Show(null, Empty(Icons.AlertTriangle, "Pull requests could not be loaded", failed.Message, "Try Again", () => _ = LoadAsync(force: true)));
+                Show(null, Empty(Icons.AlertTriangle, Strings.PrLoadFailed, failed.Message, Strings.TryAgain, () => _ = LoadAsync(force: true)));
                 break;
         }
     }
@@ -144,7 +145,7 @@ internal sealed class PullRequestsView : DockPanel
     {
         var spinner = new SymbolIcon { Data = Icons.RotateCw, Size = 14, Classes = { "spin" }, VerticalAlignment = VerticalAlignment.Center };
         Brush(spinner, SymbolIcon.ForegroundProperty, "AccentBrush");
-        return new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center, Children = { spinner, Label("Loading pull requests...", "TextSecondaryBrush") } };
+        return new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center, Children = { spinner, Label(Strings.PrLoading, "TextSecondaryBrush") } };
     }
 
     private static StackPanel Empty(Geometry icon, string title, string hint, string? action, Action? click)
@@ -175,7 +176,7 @@ internal sealed class PullRequestsView : DockPanel
         branchIcon.Margin = new Thickness(0, 0, 3, 0);
         var branch = new DockPanel { Children = { branchIcon, Label(item.HeadBranch, "TextMutedBrush", 12) } };
         DockPanel.SetDock(branchIcon, Dock.Left);
-        ToolTip.SetTip(branch, $"{item.HeadBranch} into {item.BaseBranch}");
+        ToolTip.SetTip(branch, Strings.PrBranchInto(head: item.HeadBranch, target: item.BaseBranch));
         var when = Label(Ago(item.UpdatedAt, DateTimeOffset.UtcNow), "TextMutedBrush", 12);
         number.Margin = new Thickness(0, 0, 8, 0);
         when.Margin = new Thickness(8, 0, 0, 0);
@@ -185,7 +186,7 @@ internal sealed class PullRequestsView : DockPanel
 
         var badges = new WrapPanel { ItemSpacing = 4, LineSpacing = 4, Margin = new Thickness(0, 2, 0, 0) };
         if (item.IsDraft)
-            badges.Children.Add(new Badge { Content = "Draft" });
+            badges.Children.Add(new Badge { Content = Strings.PrDraft });
         if (ReviewBadge(item.Review) is { } review)
             badges.Children.Add(review);
         if (ChecksBadge(item.Checks) is { } checks)
@@ -199,10 +200,10 @@ internal sealed class PullRequestsView : DockPanel
         ToolTip.SetTip(avatar, item.Author);
 
         var checkout = new Button { Classes = { "icon", "small" }, Content = new SymbolIcon { Data = GitIcons.Get(GitIcons.Branch), Size = 13 }, VerticalAlignment = VerticalAlignment.Top };
-        ToolTip.SetTip(checkout, "Checkout");
+        ToolTip.SetTip(checkout, Strings.MenuCheckout);
         checkout.Click += (_, _) => _ = actions.CheckoutAsync(item);
         var open = new Button { Classes = { "icon", "small" }, Content = new SymbolIcon { Data = Icons.ExternalLink, Size = 13 }, VerticalAlignment = VerticalAlignment.Top };
-        ToolTip.SetTip(open, "Open in Browser");
+        ToolTip.SetTip(open, Strings.OpenInBrowser);
         open.Click += (_, _) => actions.OpenUrl(item.WebUrl);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Children = { checkout, open }, IsVisible = false, Margin = new Thickness(4, 0, 0, 0) };
 
@@ -216,17 +217,17 @@ internal sealed class PullRequestsView : DockPanel
 
     private static Badge? ReviewBadge(ReviewState review) => review switch
     {
-        ReviewState.Approved => WithIcon(Icons.Check, "Approved", "success"),
-        ReviewState.ChangesRequested => WithIcon(Icons.AlertCircle, "Changes requested", "danger"),
-        ReviewState.ReviewRequired => WithIcon(Icons.Eye, "Review required", null),
+        ReviewState.Approved => WithIcon(Icons.Check, Strings.PrApproved, "success"),
+        ReviewState.ChangesRequested => WithIcon(Icons.AlertCircle, Strings.PrChangesRequested, "danger"),
+        ReviewState.ReviewRequired => WithIcon(Icons.Eye, Strings.PrReviewRequired, null),
         _ => null,
     };
 
     private static Badge? ChecksBadge(ChecksState checks) => checks switch
     {
-        ChecksState.Passing => WithIcon(Icons.CheckCircle, "Passing", "success", "All checks passed"),
-        ChecksState.Failing => WithIcon(Icons.X, "Failing", "danger", "Some checks failed"),
-        ChecksState.Pending => WithIcon(GitIcons.Get(GitIcons.CircleDot), "Running", "warning", "Checks are running"),
+        ChecksState.Passing => WithIcon(Icons.CheckCircle, Strings.PrChecksPassing, "success", Strings.PrChecksPassingTip),
+        ChecksState.Failing => WithIcon(Icons.X, Strings.PrChecksFailing, "danger", Strings.PrChecksFailingTip),
+        ChecksState.Pending => WithIcon(GitIcons.Get(GitIcons.CircleDot), Strings.PrChecksRunning, "warning", Strings.PrChecksRunningTip),
         _ => null,
     };
 
@@ -244,11 +245,11 @@ internal sealed class PullRequestsView : DockPanel
 
     private ContextMenu Menu(PullRequest item)
     {
-        var open = new MenuItem { Header = "Open in Browser", Icon = new SymbolIcon { Data = Icons.ExternalLink, Size = 14 } };
+        var open = new MenuItem { Header = Strings.OpenInBrowser, Icon = new SymbolIcon { Data = Icons.ExternalLink, Size = 14 } };
         open.Click += (_, _) => actions.OpenUrl(item.WebUrl);
-        var checkout = new MenuItem { Header = "Checkout", Icon = new SymbolIcon { Data = GitIcons.Get(GitIcons.Branch), Size = 14 } };
+        var checkout = new MenuItem { Header = Strings.MenuCheckout, Icon = new SymbolIcon { Data = GitIcons.Get(GitIcons.Branch), Size = 14 } };
         checkout.Click += (_, _) => _ = actions.CheckoutAsync(item);
-        var copy = new MenuItem { Header = "Copy Link", Icon = new SymbolIcon { Data = Icons.Copy, Size = 14 } };
+        var copy = new MenuItem { Header = Strings.PrCopyLink, Icon = new SymbolIcon { Data = Icons.Copy, Size = 14 } };
         copy.Click += async (_, _) =>
         {
             if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)

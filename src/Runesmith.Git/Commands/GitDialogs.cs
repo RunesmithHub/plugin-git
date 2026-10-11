@@ -26,7 +26,7 @@ internal static class GitDialogs
         error.Bind(TextBlock.ForegroundProperty, error.GetResourceObservable("DangerBrush"));
         var check = option is null ? null : new CheckBox { Content = option, IsChecked = optionChecked, Margin = new Thickness(0, 4, 0, 0) };
         var ok = new Button { Content = confirmText, Classes = { "accent" }, IsDefault = true, MinWidth = 84 };
-        var cancel = new Button { Content = "Cancel", IsCancel = true, MinWidth = 84 };
+        var cancel = new Button { Content = Strings.Cancel, IsCancel = true, MinWidth = 84 };
         var body = new StackPanel { Spacing = 6, Children = { new TextBlock { Text = label }, input, error } };
         if (check is not null)
             body.Children.Add(check);

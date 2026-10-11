@@ -51,32 +51,32 @@ internal static class PushDialog
         var empty = new EmptyState
         {
             Icon = Icons.CheckCircle,
-            Title = hasUpstream ? "Nothing to push" : "A new branch",
-            Hint = hasUpstream ? $"{remote}/{remoteBranch} has every commit of {branch}." : $"{branch} is new on {remote}; pushing it creates it there and tracks it.",
+            Title = hasUpstream ? Strings.PushEmptyTitle : Strings.PushNewBranchTitle,
+            Hint = hasUpstream ? Strings.PushEmptyHint(destination: $"{remote}/{remoteBranch}", branch: branch) : Strings.PushNewBranchHint(branch: branch, remote: remote),
             Height = 220,
             IsVisible = outgoing.Count == 0,
         };
         list.IsVisible = outgoing.Count > 0;
-        var force = new CheckBox { Content = "Force push, if the remote is where it was at the last fetch" };
+        var force = new CheckBox { Content = Strings.PushForceOption };
         var behindHint = new TextBlock
         {
-            Text = $"{remote}/{remoteBranch} has {GitOperations.Commits(behind).ToLowerInvariant()} that {branch} does not have. Update the project first, or the push is rejected.",
+            Text = Strings.PushBehindHint(count: behind, destination: $"{remote}/{remoteBranch}", branch: branch),
             Classes = { "caption" },
             TextWrapping = TextWrapping.Wrap,
             IsVisible = behind > 0,
         };
         behindHint[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("WarningBrush");
-        var push = new Button { Content = "Push", Classes = { "accent" }, IsDefault = true, MinWidth = 84, IsEnabled = outgoing.Count > 0 || !hasUpstream };
-        var cancel = new Button { Content = "Cancel", IsCancel = true, MinWidth = 84 };
+        var push = new Button { Content = Strings.Push, Classes = { "accent" }, IsDefault = true, MinWidth = 84, IsEnabled = outgoing.Count > 0 || !hasUpstream };
+        var cancel = new Button { Content = Strings.Cancel, IsCancel = true, MinWidth = 84 };
         var count = new TextBlock
         {
-            Text = outgoing.Count == 0 ? "" : outgoing.Count >= 100 ? "100 or more commits" : GitOperations.Commits(outgoing.Count),
+            Text = outgoing.Count == 0 ? "" : outgoing.Count >= 100 ? Strings.PushManyCommits : GitOperations.Commits(outgoing.Count),
             Classes = { "caption", "muted" },
         };
         var dialog = new Dialog
         {
-            Header = "Push Commits",
-            Description = hasUpstream ? $"To {remote}/{remoteBranch}, which {branch} tracks" : $"{branch} has no upstream yet; this push sets it",
+            Header = Strings.PushDialogTitle,
+            Description = hasUpstream ? Strings.PushToTracked(destination: $"{remote}/{remoteBranch}", branch: branch) : Strings.PushSetsUpstream(branch),
             Width = 620,
             ShowCloseButton = false,
             Content = new StackPanel { Spacing = 12, Children = { target, count, behindHint, new Border { Classes = { "card" }, Padding = new Thickness(4), Child = new Panel { Children = { list, empty } } }, force } },
@@ -89,7 +89,7 @@ internal static class PushDialog
         remoteBox.SelectionChanged += (_, _) => Validate();
         force.IsCheckedChanged += (_, _) =>
         {
-            push.Content = force.IsChecked == true ? "Force Push" : "Push";
+            push.Content = force.IsChecked == true ? Strings.ForcePush : Strings.Push;
             push.Classes.Set("danger", force.IsChecked == true);
             Validate();
         };

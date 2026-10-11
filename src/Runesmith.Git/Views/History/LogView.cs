@@ -16,6 +16,7 @@ using Runesmith.Git.Git;
 using Runesmith.Git.Hosting;
 using Runesmith.Git.Repositories;
 using Runesmith.Sdk.Languages;
+using Runesmith.Sdk.Localization;
 using Runesmith.Sdk.Shell;
 using Runesmith.Sdk.VersionControl;
 
@@ -35,10 +36,10 @@ internal sealed class LogView : DockPanel
     private readonly LogSource source = new(action => Dispatcher.UIThread.Post(action));
     private readonly ListBox list;
     private readonly CommitDetailsView details;
-    private readonly SearchBox search = new() { PlaceholderText = "Search messages", Width = 240 };
+    private readonly SearchBox search = new() { PlaceholderText = Strings.LogSearch, Width = 240 };
     private readonly Button branchFilter = FilterButton();
     private readonly Button authorFilter = FilterButton();
-    private readonly TextBox pathFilter = new() { PlaceholderText = "Path", Width = 180, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBox pathFilter = new() { PlaceholderText = Strings.LogPath, Width = 180, VerticalAlignment = VerticalAlignment.Center };
     private readonly Border scope = new() { Classes = { "card" }, Padding = new Thickness(8, 2, 2, 2), IsVisible = false, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock scopeText = new() { VerticalAlignment = VerticalAlignment.Center, Classes = { "caption" } };
     private readonly EmptyState empty = new() { IsVisible = false };
@@ -133,15 +134,15 @@ internal sealed class LogView : DockPanel
         };
         branchFilter.Flyout = DynamicMenu(FillBranchMenu);
         authorFilter.Flyout = DynamicMenu(FillAuthorMenu);
-        ToolTip.SetTip(branchFilter, "Show the commits of one branch");
-        ToolTip.SetTip(authorFilter, "Show the commits of one author");
-        ToolTip.SetTip(pathFilter, "Show the commits that changed a file or folder; press Enter to apply");
+        branchFilter.Localize(ToolTip.TipProperty, () => Strings.LogBranchFilterTip);
+        authorFilter.Localize(ToolTip.TipProperty, () => Strings.LogAuthorFilterTip);
+        pathFilter.Localize(ToolTip.TipProperty, () => Strings.LogPathFilterTip);
 
         details = new CommitDetailsView(operations, languages, Select);
         source.Changed += (_, _) => OnSourceChanged();
 
         var clearScope = new Button { Classes = { "icon", "small" }, Content = new SymbolIcon { Data = Icons.X, Size = 12 }, Margin = new Thickness(4, 0, 0, 0) };
-        ToolTip.SetTip(clearScope, "Show every branch again");
+        clearScope.Localize(ToolTip.TipProperty, () => Strings.LogClearScopeTip);
         clearScope.Click += (_, _) =>
         {
             request = null;
@@ -150,10 +151,10 @@ internal sealed class LogView : DockPanel
         scope.Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { new SymbolIcon { Data = Icons.Filter, Size = 12, Margin = new Thickness(0, 0, 6, 0) }, scopeText, clearScope } };
 
         var refresh = new Button { Classes = { "icon", "small" }, Content = new SymbolIcon { Data = Icons.Refresh, Size = 14 }, VerticalAlignment = VerticalAlignment.Center };
-        ToolTip.SetTip(refresh, "Read the log again");
+        refresh.Localize(ToolTip.TipProperty, () => Strings.LogRefreshTip);
         refresh.Click += (_, _) => Reload();
         var fetch = new Button { Classes = { "icon", "small" }, Content = new SymbolIcon { Data = Icons.Find(GitIcons.Pull), Size = 14 }, VerticalAlignment = VerticalAlignment.Center };
-        ToolTip.SetTip(fetch, "Fetch every remote");
+        fetch.Localize(ToolTip.TipProperty, () => Strings.LogFetchTip);
         fetch.Click += async (_, _) =>
         {
             await operations.FetchAsync();
@@ -185,6 +186,13 @@ internal sealed class LogView : DockPanel
 
         navigator.Requested += (_, r) => Apply(r);
         repositories.Changed += (_, _) => OnRepositoryChanged();
+        Localized.Changed += (_, _) => Dispatcher.UIThread.Post(() =>
+        {
+            search.PlaceholderText = Strings.LogSearch;
+            pathFilter.PlaceholderText = Strings.LogPath;
+            UpdateFilterLabels();
+            OnSourceChanged();
+        });
         UpdateFilterLabels();
         if (navigator.TakePending() is { } pending)
             Apply(pending);
@@ -259,9 +267,9 @@ internal sealed class LogView : DockPanel
         {
             var filtered = request is not null || branch is not null || author is not null || !string.IsNullOrWhiteSpace(search.Text) || CurrentPathFilter.Length > 0;
             empty.Icon = Icons.Find(source.Error is null ? GitIcons.History : "alert-triangle");
-            empty.Title = repositories.Current is null ? "No Git repository" : source.Error is not null ? "Could not read the log" : filtered ? "No commits match" : "No commits yet";
-            empty.Hint = repositories.Current is null ? "Open a folder in a Git repository to see its history."
-                : source.Error ?? (filtered ? "Change or clear the filters to see more commits." : "Commit your first changes from the Commit window.");
+            empty.Title = repositories.Current is null ? Strings.LogNoRepository : source.Error is not null ? Strings.LogFailed : filtered ? Strings.LogNoMatch : Strings.NoCommitsYet;
+            empty.Hint = repositories.Current is null ? Strings.LogNoRepositoryHint
+                : source.Error ?? (filtered ? Strings.LogNoMatchHint : Strings.LogEmptyHint);
         }
 
         if (GraphLanes != lastWidth)
@@ -312,9 +320,9 @@ internal sealed class LogView : DockPanel
 
     private void UpdateFilterLabels()
     {
-        SetFilterLabel(branchFilter, "Branch", request is not null ? "Filtered" : branch is null ? "All" : GitRef.ShortName(branch));
+        SetFilterLabel(branchFilter, Strings.LogFilterBranch, request is not null ? Strings.LogFilterFiltered : branch is null ? Strings.LogFilterAll : GitRef.ShortName(branch));
         branchFilter.IsEnabled = request is null;
-        SetFilterLabel(authorFilter, "Author", author ?? "Anyone");
+        SetFilterLabel(authorFilter, Strings.LogFilterAuthor, author ?? Strings.LogFilterAnyone);
     }
 
     private void FillBranchMenu(MenuFlyout menu)
@@ -335,10 +343,10 @@ internal sealed class LogView : DockPanel
             menu.Items.Add(item);
         }
 
-        Add("All branches", null, GitIcons.Merge);
-        Add("Current branch (HEAD)", "HEAD", "check");
+        Add(Strings.LogAllBranches, null, GitIcons.Merge);
+        Add(Strings.LogCurrentBranch, "HEAD", "check");
         menu.Items.Add(new Separator());
-        var loading = new MenuItem { Header = "Loading branches...", IsEnabled = false };
+        var loading = new MenuItem { Header = Strings.LogLoadingBranches, IsEnabled = false };
         menu.Items.Add(loading);
         _ = LoadAsync();
 
@@ -366,7 +374,7 @@ internal sealed class LogView : DockPanel
             menu.Items.Add(item);
         }
 
-        Add("Anyone", null);
+        Add(Strings.LogFilterAnyone, null);
         var authors = source.Entries.Take(2000).GroupBy(e => e.Commit.AuthorName).OrderByDescending(g => g.Count()).Take(15).Select(g => g.Key).ToList();
         if (author is not null && !authors.Contains(author))
             authors.Insert(0, author);
@@ -388,14 +396,14 @@ internal sealed class LogView : DockPanel
 
         var current = repositories.Current?.Branch ?? "HEAD";
         foreach (var label in commit.Refs.Where(r => r.Kind == RefKind.LocalBranch && !r.IsHead))
-            Add($"Checkout {label.Name}", "check", () => _ = operations.CheckoutAsync(new GitRef("refs/heads/" + label.Name, RefKind.LocalBranch, commit.Sha)));
-        Add("Checkout Revision", "check", () => _ = operations.CheckoutCommitAsync(commit));
-        Add("New Branch...", "plus", () => _ = operations.NewBranchAsync(commit.Sha, commit.ShortSha));
+            Add(Strings.MenuCheckoutBranch(label.Name), "check", () => _ = operations.CheckoutAsync(new GitRef("refs/heads/" + label.Name, RefKind.LocalBranch, commit.Sha)));
+        Add(Strings.MenuCheckoutRevision, "check", () => _ = operations.CheckoutCommitAsync(commit));
+        Add(Strings.CommandNewBranch, "plus", () => _ = operations.NewBranchAsync(commit.Sha, commit.ShortSha));
         items.Add(new Separator());
-        Add("Cherry-pick", GitIcons.Merge, () => _ = operations.CherryPickAsync(commit));
-        Add("Revert Commit", "undo", () => _ = operations.RevertAsync(commit));
-        var reset = new MenuItem { Header = $"Reset {current} to Here", Icon = new SymbolIcon { Data = Icons.RotateCcw, Size = 14 } };
-        foreach (var (title, mode) in new[] { ("Soft: keep the changes staged", ResetMode.Soft), ("Mixed: keep the changes in the working tree", ResetMode.Mixed), ("Hard: throw the changes away", ResetMode.Hard) })
+        Add(Strings.MenuCherryPick, GitIcons.Merge, () => _ = operations.CherryPickAsync(commit));
+        Add(Strings.MenuRevertCommit, "undo", () => _ = operations.RevertAsync(commit));
+        var reset = new MenuItem { Header = Strings.MenuResetToHere(current), Icon = new SymbolIcon { Data = Icons.RotateCcw, Size = 14 } };
+        foreach (var (title, mode) in new[] { (Strings.MenuResetSoft, ResetMode.Soft), (Strings.MenuResetMixed, ResetMode.Mixed), (Strings.MenuResetHard, ResetMode.Hard) })
         {
             var item = new MenuItem { Header = title };
             item.Click += (_, _) => _ = operations.ResetAsync(commit, mode);
@@ -404,10 +412,10 @@ internal sealed class LogView : DockPanel
 
         items.Add(reset);
         items.Add(new Separator());
-        Add("Copy Hash", "copy", () => _ = CopyAsync(commit.Sha));
+        Add(Strings.MenuCopyHash, "copy", () => _ = CopyAsync(commit.Sha));
         if (launcher is not null && hosts.Find(repositories.Current, preferUpstream: true) is { } hosted
             && hosted.Host.GetWebUrl(hosted.Remote.FetchUrl, new WebTarget(WebTargetKind.Commit, commit.Sha)) is { } link)
-            Add($"Open on {hosted.Host.Name}", "external-link", () => launcher.OpenUrl(link));
+            Add(Strings.CommandOpenOn(hosted.Host.Name), "external-link", () => launcher.OpenUrl(link));
         return new ContextMenu { ItemsSource = items };
     }
 
@@ -421,7 +429,7 @@ internal sealed class LogView : DockPanel
 
     private static void SetFilterLabel(Button button, string name, string value)
     {
-        var label = new TextBlock { Text = name + ": ", VerticalAlignment = VerticalAlignment.Center };
+        var label = new TextBlock { Text = name + " ", VerticalAlignment = VerticalAlignment.Center };
         label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMutedBrush");
         var chevron = new SymbolIcon { Data = Icons.ChevronDown, Size = 12, Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
         button.Content = new StackPanel
@@ -517,11 +525,11 @@ internal sealed class LogView : DockPanel
             };
             ToolTip.SetTip(pill, label.Kind switch
             {
-                null => "HEAD (detached)",
-                RefKind.LocalBranch when label.IsHead => $"{label.Name}, the current branch",
-                RefKind.LocalBranch => $"Branch {label.Name}",
-                RefKind.RemoteBranch => $"Remote branch {label.Name}",
-                _ => $"Tag {label.Name}",
+                null => Strings.LabelDetachedHead,
+                RefKind.LocalBranch when label.IsHead => Strings.LabelCurrentBranch(label.Name),
+                RefKind.LocalBranch => Strings.BranchName(label.Name),
+                RefKind.RemoteBranch => Strings.LabelRemoteBranch(label.Name),
+                _ => Strings.BranchTipTag(label.Name),
             });
             return pill;
         }

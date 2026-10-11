@@ -38,17 +38,17 @@ internal sealed class HostingCommands(
         ArgumentNullException.ThrowIfNull(registry);
         GitIcons.Register();
 
-        registry.Add(new CommandDefinition(CommandIds.CloneRepository, "Clone Repository...", Category)
+        registry.Add(new CommandDefinition(CommandIds.CloneRepository, Strings.CommandClone, Category)
         {
             Icon = "import",
-            Description = "Clone a repository from your accounts on hosting services, or from any Git URL, and open it",
+            Description = Strings.CommandCloneDescription,
         }, CloneAsync);
         registry.AddMenuItem(new MenuItemDefinition(Menus.File, CommandIds.CloneRepository, "1-new", 10));
 
-        registry.Add(new CommandDefinition(CreatePullRequest, "Create Pull Request...", Category)
+        registry.Add(new CommandDefinition(CreatePullRequest, Strings.CommandCreatePullRequest, Category)
         {
             Icon = GitIcons.PullRequest,
-            Description = "Propose the current branch's changes in a pull request on the repository's hosting service",
+            Description = Strings.CommandCreatePullRequestDescription,
         }, _ => pullRequests.CreateAsync(), _ => Hosted() is not null && repository?.Current?.Branch is not null);
         registry.AddMenuItem(new MenuItemDefinition(GitCommands.Menu, CreatePullRequest, "7-pull-requests", 0));
         registry.AddMenuItem(new MenuItemDefinition(GitCommands.Menu, "view." + PullRequestsToolWindow.Id, "7-pull-requests", 1));
@@ -71,11 +71,11 @@ internal sealed class HostingCommands(
         bool Owns(object? _) => Hosted() is { } hosted && provider.Hosts.Contains(hosted.Host);
         bool HasLink(object? argument) => Owns(argument) && (argument is not ContextMenuTarget || Link(argument) is not null);
 
-        Add(openOn, $"Open on {provider.Name}", provider.Icon, $"Open the current file, at the selected lines, on {provider.Name}",
+        Add(openOn, Strings.CommandOpenOn(provider.Name), provider.Icon, Strings.CommandOpenOnDescription(provider.Name),
             argument => Open(Link(argument) ?? RepositoryLink()), HasLink, 0);
-        Add(copyLink, $"Copy {provider.Name} Link", "link", $"Copy the link to the current file and its selected lines on {provider.Name}",
+        Add(copyLink, Strings.CommandCopyLink(provider.Name), "link", Strings.CommandCopyLinkDescription(provider.Name),
             argument => CopyAsync(Link(argument) ?? RepositoryLink()), HasLink, 1);
-        Add(openRepository, $"Open Repository on {provider.Name}", "external-link", $"Open the repository's page on {provider.Name}",
+        Add(openRepository, Strings.CommandOpenRepository(provider.Name), "external-link", Strings.CommandOpenRepositoryDescription(provider.Name),
             _ => Open(RepositoryLink()), Owns, 2);
 
         registry.AddMenuItem(new MenuItemDefinition(ContextMenus.Editor, openOn, GitCommands.ContextGroup, 10));
@@ -95,7 +95,7 @@ internal sealed class HostingCommands(
     {
         if (dialogs is null)
         {
-            notifications?.Notify(NotificationKind.Error, "Cloning needs a newer Runesmith", "This version of Runesmith does not let plugins show dialogs.");
+            notifications?.Notify(NotificationKind.Error, Strings.CloneNeedsDialogs, Strings.CloneNeedsDialogsMessage);
             return;
         }
 
@@ -137,6 +137,6 @@ internal sealed class HostingCommands(
             return;
 
         await clipboard.SetTextAsync(link.AbsoluteUri);
-        notifications?.Notify(NotificationKind.Info, "Link copied", link.AbsoluteUri);
+        notifications?.Notify(NotificationKind.Info, Strings.LinkCopied, link.AbsoluteUri);
     }
 }

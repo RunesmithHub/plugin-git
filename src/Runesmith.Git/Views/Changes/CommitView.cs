@@ -20,6 +20,7 @@ using Runesmith.Git.Repositories;
 using Runesmith.Sdk.Commands;
 using Runesmith.Sdk.Documents;
 using Runesmith.Sdk.Languages;
+using Runesmith.Sdk.Localization;
 using Runesmith.Sdk.Settings;
 using Runesmith.Sdk.Shell;
 
@@ -46,12 +47,12 @@ internal sealed class CommitView : DockPanel
     private readonly Banner errorBanner = new();
     private readonly TextBox message;
     private readonly TextBlock subjectHint = new() { Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center, IsVisible = false };
-    private readonly CheckBox amend = new() { Content = "Amend", VerticalAlignment = VerticalAlignment.Center };
-    private readonly Button commit = new() { Content = "Commit", Classes = { "accent" }, MinWidth = 84 };
-    private readonly Button commitAndPush = new() { Content = "Commit and Push", MinWidth = 120 };
+    private readonly CheckBox amend = new() { VerticalAlignment = VerticalAlignment.Center };
+    private readonly Button commit = new() { Classes = { "accent" }, MinWidth = 84 };
+    private readonly Button commitAndPush = new() { MinWidth = 120 };
     private readonly TextBlock summary = new() { Classes = { "caption", "muted" }, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
-    private readonly MenuItem signoff = new() { Header = "Sign Off", ToggleType = MenuItemToggleType.CheckBox };
-    private readonly MenuItem skipHooks = new() { Header = "Skip Hooks", ToggleType = MenuItemToggleType.CheckBox };
+    private readonly MenuItem signoff = new() { ToggleType = MenuItemToggleType.CheckBox };
+    private readonly MenuItem skipHooks = new() { ToggleType = MenuItemToggleType.CheckBox };
     private string typedBeforeAmend = "";
     private bool isCommitting;
     private bool settingMessage;
@@ -88,8 +89,8 @@ internal sealed class CommitView : DockPanel
         noChanges = new EmptyState
         {
             Icon = Icons.CheckCircle,
-            Title = "No changes",
-            Hint = "The working tree matches the last commit. Edit files and they show here, ready to commit.",
+            Title = Strings.CommitNoChanges,
+            Hint = Strings.CommitNoChangesHint,
             IsVisible = false,
         };
 
@@ -97,7 +98,7 @@ internal sealed class CommitView : DockPanel
         {
             AcceptsReturn = true,
             TextWrapping = TextWrapping.Wrap,
-            PlaceholderText = "Commit message",
+            PlaceholderText = Strings.CommitMessagePlaceholder,
             MinHeight = 92,
             MaxHeight = 260,
             VerticalContentAlignment = VerticalAlignment.Top,
@@ -105,18 +106,18 @@ internal sealed class CommitView : DockPanel
         message.TextChanged += (_, _) => OnMessageChanged();
         message.AddHandler(KeyDownEvent, OnMessageKeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         amend.IsCheckedChanged += (_, _) => _ = OnAmendChangedAsync();
-        ToolTip.SetTip(amend, "Replace the last commit with the staged changes and this message");
+        amend.Localize(ContentControl.ContentProperty, () => Strings.CommitAmend).Localize(ToolTip.TipProperty, () => Strings.CommitAmendTip);
         commit.Click += (_, _) => _ = CommitAsync(push: false);
         commitAndPush.Click += (_, _) => _ = CommitAsync(push: true);
-        ToolTip.SetTip(commit, "Commit the staged changes (Ctrl+Enter)");
-        ToolTip.SetTip(commitAndPush, "Commit, then push to the upstream branch (Ctrl+Shift+Enter)");
+        commit.Localize(ToolTip.TipProperty, () => Strings.CommitTip);
+        commitAndPush.Localize(ContentControl.ContentProperty, () => Strings.CommitAndPush).Localize(ToolTip.TipProperty, () => Strings.CommitAndPushTip);
 
-        var recent = IconButton(GitIcons.History, "Recent messages");
+        var recent = IconButton(GitIcons.History, () => Strings.CommitRecentMessages);
         recent.Flyout = DynamicMenu(FillRecentMessages);
-        var options = IconButton("settings", "Commit options");
+        var options = IconButton("settings", () => Strings.CommitOptions);
         options.Flyout = new MenuFlyout { Placement = PlacementMode.TopEdgeAlignedRight, Items = { signoff, skipHooks } };
-        ToolTip.SetTip(signoff, "Add a Signed-off-by line with your name and address");
-        ToolTip.SetTip(skipHooks, "Do not run the pre-commit and commit-msg hooks");
+        signoff.Localize(HeaderedSelectingItemsControl.HeaderProperty, () => Strings.CommitSignOff).Localize(ToolTip.TipProperty, () => Strings.CommitSignOffTip);
+        skipHooks.Localize(HeaderedSelectingItemsControl.HeaderProperty, () => Strings.CommitSkipHooks).Localize(ToolTip.TipProperty, () => Strings.CommitSkipHooksTip);
 
         var messageTools = new DockPanel { Margin = new Thickness(0, 6, 0, 0), LastChildFill = false };
         DockPanel.SetDock(amend, Dock.Left);
@@ -146,12 +147,22 @@ internal sealed class CommitView : DockPanel
         signoff.Click += (_, _) => signoff.IsChecked = !signoff.IsChecked;
         skipHooks.Click += (_, _) => skipHooks.IsChecked = !skipHooks.IsChecked;
         repositories.Changed += (_, _) => Update();
+        Localized.Changed += (_, _) => Dispatcher.UIThread.Post(Retext);
         operations.FocusMessageRequested += (_, _) => FocusMessage();
         settings.Changed += (_, e) =>
         {
             if (e.Key == GitSettings.SubjectLength)
                 OnMessageChanged();
         };
+        Update();
+    }
+
+    private void Retext()
+    {
+        noChanges.Title = Strings.CommitNoChanges;
+        noChanges.Hint = Strings.CommitNoChangesHint;
+        message.PlaceholderText = Strings.CommitMessagePlaceholder;
+        OnMessageChanged();
         Update();
     }
 
@@ -202,17 +213,17 @@ internal sealed class CommitView : DockPanel
                 stateBanner.Hide();
                 break;
             case OngoingOperation.Merge:
-                stateBanner.Show(conflicts > 0 ? BannerTone.Warning : BannerTone.Info, "Merging",
-                    conflicts > 0 ? $"Resolve the conflicts in {Files(conflicts)}, stage them, then commit to finish the merge." : "The conflicts are resolved. Commit to finish the merge.",
-                    ("Abort Merge", () => _ = operations.AbortAsync()));
+                stateBanner.Show(conflicts > 0 ? BannerTone.Warning : BannerTone.Info, Strings.StateMerging,
+                    conflicts > 0 ? Strings.StateMergeConflicts(conflicts) : Strings.StateMergeResolved,
+                    (Strings.StateAbortMerge, () => _ = operations.AbortAsync()));
                 if (string.IsNullOrWhiteSpace(message.Text) && repositories.Repository is { } repository && File.Exists(Path.Combine(repository.GitDirectory, "MERGE_MSG")))
                     SetMessage(string.Join('\n', File.ReadAllLines(Path.Combine(repository.GitDirectory, "MERGE_MSG")).Where(l => !l.StartsWith('#'))).Trim());
                 break;
             default:
-                var name = repositories.Ongoing == OngoingOperation.CherryPick ? "Cherry-picking" : repositories.Ongoing == OngoingOperation.Rebase ? "Rebasing" : "Reverting";
+                var name = repositories.Ongoing == OngoingOperation.CherryPick ? Strings.StateCherryPicking : repositories.Ongoing == OngoingOperation.Rebase ? Strings.StateRebasing : Strings.StateReverting;
                 stateBanner.Show(conflicts > 0 ? BannerTone.Warning : BannerTone.Info, name,
-                    conflicts > 0 ? $"Resolve the conflicts in {Files(conflicts)} and stage them, then continue." : "The conflicts are resolved. Continue to go on.",
-                    ("Continue", () => _ = operations.ContinueAsync()), ("Abort", () => _ = operations.AbortAsync()));
+                    conflicts > 0 ? Strings.StateConflicts(conflicts) : Strings.StateResolved,
+                    (Strings.StateContinue, () => _ = operations.ContinueAsync()), (Strings.Abort, () => _ = operations.AbortAsync()));
                 break;
         }
     }
@@ -226,8 +237,8 @@ internal sealed class CommitView : DockPanel
         var canCommit = !isCommitting && repositories.Current is not null && hasMessage && (total > 0 || amend.IsChecked == true || repositories.Ongoing == OngoingOperation.Merge);
         commit.IsEnabled = canCommit;
         commitAndPush.IsEnabled = canCommit && repositories.Current?.Remotes.Count > 0;
-        commit.Content = amend.IsChecked == true ? "Amend Commit" : "Commit";
-        summary.Text = total == 0 ? "" : staged == 0 ? $"{Files(total)} changed, none staged" : $"{staged} of {Files(total)} staged";
+        commit.Content = amend.IsChecked == true ? Strings.CommitAmendButton : Strings.CommitButton;
+        summary.Text = total == 0 ? "" : staged == 0 ? Strings.CommitSummaryNoneStaged(total) : Strings.CommitSummaryStaged(total: total, staged: staged);
     }
 
     private void OnMessageChanged()
@@ -237,9 +248,9 @@ internal sealed class CommitView : DockPanel
         var subject = (message.Text ?? "").Split('\n')[0].TrimEnd('\r');
         var limit = settings.Get<int>(GitSettings.SubjectLength);
         subjectHint.IsVisible = subject.Length > limit;
-        subjectHint.Text = string.Create(CultureInfo.CurrentCulture, $"Subject {subject.Length} / {limit}");
+        subjectHint.Text = Strings.CommitSubjectLength(length: subject.Length, limit: limit);
         subjectHint[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("WarningBrush");
-        ToolTip.SetTip(subjectHint, $"Subjects of {limit} characters or fewer read best in logs; move the rest to the body, after an empty line.");
+        ToolTip.SetTip(subjectHint, Strings.CommitSubjectLengthTip(limit));
         UpdateButtons();
     }
 
@@ -274,8 +285,8 @@ internal sealed class CommitView : DockPanel
 
         if (!status.Staged.Any() && amend.IsChecked != true && repositories.Ongoing != OngoingOperation.Merge)
         {
-            errorBanner.Show(BannerTone.Info, "Nothing is staged", "Check the files to commit, or stage every change and commit them all.",
-                ($"Stage All ({Files(status.ChangedCount - status.Conflicts.Count())}) and Commit", () => _ = StageAllAndCommitAsync(push)));
+            errorBanner.Show(BannerTone.Info, Strings.CommitNothingStaged, Strings.CommitNothingStagedMessage,
+                (Strings.CommitStageAll(status.ChangedCount - status.Conflicts.Count()), () => _ = StageAllAndCommitAsync(push)));
             return;
         }
 
@@ -315,15 +326,15 @@ internal sealed class CommitView : DockPanel
         switch (exception.Kind)
         {
             case GitErrorKind.NothingToCommit:
-                errorBanner.Show(BannerTone.Info, "Nothing to commit", exception.Message);
+                errorBanner.Show(BannerTone.Info, Strings.CommitNothing, exception.Message);
                 break;
             case GitErrorKind.Conflict:
-                errorBanner.Show(BannerTone.Warning, "Resolve the conflicts first", exception.Message);
+                errorBanner.Show(BannerTone.Warning, Strings.CommitConflictsFirst, exception.Message);
                 break;
             default:
                 var fromHook = exception.Result.Error.Contains("hook", StringComparison.OrdinalIgnoreCase);
-                errorBanner.Show(BannerTone.Error, fromHook ? "A hook stopped the commit" : "The commit failed", exception.Message,
-                    fromHook && !skipHooks.IsChecked ? [("Commit Without Hooks", () =>
+                errorBanner.Show(BannerTone.Error, fromHook ? Strings.CommitHookStopped : Strings.CommitFailed, exception.Message,
+                    fromHook && !skipHooks.IsChecked ? [(Strings.CommitWithoutHooks, () =>
                     {
                         skipHooks.IsChecked = true;
                         _ = CommitAsync(push: false);
@@ -367,7 +378,7 @@ internal sealed class CommitView : DockPanel
     private StackPanel Row(ChangeNode node)
     {
         var check = new CheckBox { IsChecked = node.IsStaged, VerticalAlignment = VerticalAlignment.Center, Padding = new Thickness(0), MinWidth = 0, Margin = new Thickness(0, 0, 6, 0) };
-        ToolTip.SetTip(check, node.IsStaged ? "Unstage" : "Stage");
+        ToolTip.SetTip(check, node.IsStaged ? Strings.Unstage : Strings.Stage);
         check.Click += (_, _) =>
         {
             var targets = tree.SelectedItems?.OfType<ChangeNode>().Contains(node) == true ? SelectedFiles() : [.. node.Files()];
@@ -436,14 +447,14 @@ internal sealed class CommitView : DockPanel
             var sameFolder = Path.GetDirectoryName(original) == Path.GetDirectoryName(entry.Path);
             panel.Children.Add(new TextBlock
             {
-                Text = $"from {(sameFolder ? Path.GetFileName(original) : original)}",
+                Text = Strings.ChangeRenamedFromShort(sameFolder ? Path.GetFileName(original) : original),
                 Classes = { "caption", "muted" },
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(8, 0, 0, 0),
             });
         }
 
-        ToolTip.SetTip(name, entry.OriginalPath is { } from ? $"{entry.Path}\nRenamed from {from}" : entry.Path);
+        ToolTip.SetTip(name, entry.OriginalPath is { } from ? $"{entry.Path}\n{Strings.ChangeRenamedFrom(from)}" : entry.Path);
         return panel;
     }
 
@@ -456,27 +467,27 @@ internal sealed class CommitView : DockPanel
         var entries = files.Select(f => f.Entry!).Distinct().ToList();
         var repository = repositories.Repository;
         if (files is [{ Entry: { } single } only])
-            items.Add(Item("Show Diff", Icons.Find("git-compare"), () => _ = operations.ShowDiffAsync(single, only.Group == ChangeGroup.Staged), "Enter"));
+            items.Add(Item(Strings.CommandShowDiff, Icons.Find("git-compare"), () => _ = operations.ShowDiffAsync(single, only.Group == ChangeGroup.Staged), "Enter"));
         if (files.Any(f => f.Group != ChangeGroup.Staged))
-            items.Add(Item("Stage", Icons.Plus, () => _ = ToggleAsync(files, stage: true), "Space"));
+            items.Add(Item(Strings.Stage, Icons.Plus, () => _ = ToggleAsync(files, stage: true), "Space"));
         if (files.Any(f => f.Group == ChangeGroup.Staged))
-            items.Add(Item("Unstage", Icons.Minus, () => _ = ToggleAsync(files, stage: false)));
-        items.Add(Item("Roll Back...", Icons.Undo, () => _ = operations.RollbackAsync(entries), "Delete"));
+            items.Add(Item(Strings.Unstage, Icons.Minus, () => _ = ToggleAsync(files, stage: false)));
+        items.Add(Item(Strings.CommandRollbackFile, Icons.Undo, () => _ = operations.RollbackAsync(entries), "Delete"));
         items.Add(new Separator());
-        items.Add(Item("Open", Icons.FileCode, () =>
+        items.Add(Item(Strings.MenuOpen, Icons.FileCode, () =>
         {
             foreach (var entry in entries.Where(e => repository is not null && File.Exists(repository.FullPath(e.Path))))
                 _ = editors.OpenAsync(repository!.FullPath(entry.Path));
         }));
         if (launcher is not null && repository is not null && entries is [var revealed])
-            items.Add(Item(OperatingSystem.IsMacOS() ? "Reveal in Finder" : "Reveal in File Manager", Icons.ExternalLink, () => launcher.Reveal(repository.FullPath(revealed.Path))));
+            items.Add(Item(OperatingSystem.IsMacOS() ? Strings.MenuRevealFinder : Strings.MenuRevealFileManager, Icons.ExternalLink, () => launcher.Reveal(repository.FullPath(revealed.Path))));
         if (repository is not null && entries is [var historyEntry] && historyEntry.Kind != StatusKind.Untracked)
-            items.Add(Item("Show History", Icons.Find(GitIcons.History), () => operations.ShowFileHistory(repository.FullPath(historyEntry.Path))));
+            items.Add(Item(Strings.CommandShowHistory, Icons.Find(GitIcons.History), () => operations.ShowFileHistory(repository.FullPath(historyEntry.Path))));
         if (entries.All(e => e.Kind == StatusKind.Untracked))
-            items.Add(Item("Add to .gitignore", Icons.EyeOff, () => _ = operations.AddToGitignoreAsync([.. entries.Select(e => e.Path)])));
+            items.Add(Item(Strings.CommandAddToGitignore, Icons.EyeOff, () => _ = operations.AddToGitignoreAsync([.. entries.Select(e => e.Path)])));
         items.Add(new Separator());
-        items.Add(Item(entries.Count == 1 ? "Copy Path" : "Copy Paths", Icons.Copy, () => _ = CopyAsync(string.Join(Environment.NewLine, entries.Select(e => repository?.FullPath(e.Path) ?? e.Path)))));
-        items.Add(Item(entries.Count == 1 ? "Copy Relative Path" : "Copy Relative Paths", null, () => _ = CopyAsync(string.Join(Environment.NewLine, entries.Select(e => e.Path)))));
+        items.Add(Item(Strings.MenuCopyPath(entries.Count), Icons.Copy, () => _ = CopyAsync(string.Join(Environment.NewLine, entries.Select(e => repository?.FullPath(e.Path) ?? e.Path)))));
+        items.Add(Item(Strings.MenuCopyRelativePath(entries.Count), null, () => _ = CopyAsync(string.Join(Environment.NewLine, entries.Select(e => e.Path)))));
         return new ContextMenu { ItemsSource = items };
     }
 
@@ -498,7 +509,7 @@ internal sealed class CommitView : DockPanel
         }
         catch (GitException exception)
         {
-            errorBanner.Show(BannerTone.Error, "Could not unstage", exception.Message);
+            errorBanner.Show(BannerTone.Error, Strings.UnstageFailed, exception.Message);
         }
 
         await repositories.RefreshAsync();
@@ -512,7 +523,7 @@ internal sealed class CommitView : DockPanel
         }
         catch (GitException exception)
         {
-            errorBanner.Show(BannerTone.Error, "Could not stage", exception.Message);
+            errorBanner.Show(BannerTone.Error, Strings.StageFailed, exception.Message);
         }
 
         await repositories.RefreshAsync();
@@ -523,7 +534,7 @@ internal sealed class CommitView : DockPanel
 
     private void FillRecentMessages(MenuFlyout menu)
     {
-        menu.Items.Add(new MenuItem { Header = "Loading...", IsEnabled = false });
+        menu.Items.Add(new MenuItem { Header = Strings.Loading, IsEnabled = false });
         _ = LoadAsync();
 
         async Task LoadAsync()
@@ -531,7 +542,7 @@ internal sealed class CommitView : DockPanel
             var messages = repositories.Repository is { } repository ? await repository.GetRecentMessagesAsync(RecentMessageCount, CancellationToken.None) : [];
             menu.Items.Clear();
             if (messages.Count == 0)
-                menu.Items.Add(new MenuItem { Header = "No commits yet", IsEnabled = false });
+                menu.Items.Add(new MenuItem { Header = Strings.NoCommitsYet, IsEnabled = false });
             foreach (var text in messages)
             {
                 var item = new MenuItem { Header = text.Split('\n')[0], MaxWidth = 460 };
@@ -568,7 +579,6 @@ internal sealed class CommitView : DockPanel
 
     private static IEnumerable<ChangeNode> Flatten(ChangeNode node) => node.Children.SelectMany(Flatten).Prepend(node);
 
-    private static string Files(int count) => count == 1 ? "1 file" : string.Create(CultureInfo.CurrentCulture, $"{count} files");
 
     private static string LetterBrush(char letter) => letter switch
     {
@@ -581,21 +591,20 @@ internal sealed class CommitView : DockPanel
 
     private static string Describe(ChangeNode node) => node.Letter switch
     {
-        'A' => "Added",
-        'U' => "Untracked",
-        'D' => "Deleted",
-        'R' => "Renamed",
-        'C' => "Copied",
-        'T' => "Type changed",
-        '!' => "Conflict",
-        _ => "Modified",
+        'A' => Strings.ChangeAdded,
+        'U' => Strings.ChangeUntracked,
+        'D' => Strings.ChangeDeleted,
+        'R' => Strings.ChangeRenamed,
+        'C' => Strings.ChangeCopied,
+        'T' => Strings.ChangeTypeChanged,
+        '!' => Strings.ChangeConflict,
+        _ => Strings.ChangeModified,
     };
 
-    private static Button IconButton(string icon, string tip)
+    private static Button IconButton(string icon, Func<string> tip)
     {
         var button = new Button { Classes = { "icon", "small" }, Content = new SymbolIcon { Data = Icons.Find(icon), Size = 14 } };
-        ToolTip.SetTip(button, tip);
-        return button;
+        return button.Localize(ToolTip.TipProperty, tip);
     }
 
     private static MenuFlyout DynamicMenu(Action<MenuFlyout> fill)

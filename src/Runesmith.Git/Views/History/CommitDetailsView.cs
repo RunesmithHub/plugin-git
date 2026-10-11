@@ -86,7 +86,7 @@ internal sealed class CommitDetailsView : DockPanel
     private readonly Grid facts = new() { ColumnDefinitions = new ColumnDefinitions("Auto,*"), Margin = new Thickness(0, 12, 0, 0) };
     private readonly TextBlock filesTitle = new() { Classes = { "caption", "muted" }, FontWeight = FontWeight.SemiBold, Margin = new Thickness(12, 10, 12, 4) };
     private readonly TreeView files;
-    private readonly EmptyState empty = new() { Icon = Icons.Find(GitIcons.Commit), Title = "No commit selected", Hint = "Select a commit to see its message and the files it changed." };
+    private readonly EmptyState empty = new() { Icon = Icons.Find(GitIcons.Commit), Title = Strings.DetailsNoCommit, Hint = Strings.DetailsNoCommitHint };
     private readonly Grid content;
     private GitCommit? commit;
     private int version;
@@ -142,7 +142,7 @@ internal sealed class CommitDetailsView : DockPanel
         }
         catch (GitException exception)
         {
-            empty.Title = "Could not read the commit";
+            empty.Title = Strings.DetailsFailed;
             empty.Hint = exception.Message;
             return;
         }
@@ -156,7 +156,7 @@ internal sealed class CommitDetailsView : DockPanel
         body.Text = split < 0 ? "" : message[(split + 2)..].Trim();
         body.IsVisible = body.Text.Length > 0;
         FillFacts(details.Commit);
-        filesTitle.Text = details.Files.Count == 1 ? "1 changed file" : string.Create(CultureInfo.CurrentCulture, $"{details.Files.Count} changed files");
+        filesTitle.Text = Strings.DetailsChangedFiles(details.Files.Count);
         files.ItemsSource = CommitFileNode.Build(details.Files);
         content.IsVisible = true;
         empty.IsVisible = false;
@@ -166,20 +166,20 @@ internal sealed class CommitDetailsView : DockPanel
     {
         facts.Children.Clear();
         facts.RowDefinitions.Clear();
-        AddFact("Author", Person(shown.AuthorName, shown.AuthorEmail, shown.AuthorDate));
+        AddFact(Strings.DetailsAuthor, Person(shown.AuthorName, shown.AuthorEmail, shown.AuthorDate));
         if (shown.CommitterName != shown.AuthorName || shown.CommitterEmail != shown.AuthorEmail || Math.Abs((shown.CommitDate - shown.AuthorDate).TotalMinutes) > 1)
-            AddFact("Committer", Person(shown.CommitterName, shown.CommitterEmail, shown.CommitDate));
-        AddFact("Commit", Hash(shown.Sha, link: false));
+            AddFact(Strings.DetailsCommitter, Person(shown.CommitterName, shown.CommitterEmail, shown.CommitDate));
+        AddFact(Strings.DetailsCommit, Hash(shown.Sha, link: false));
         if (shown.Parents.Count > 0)
         {
             var parents = new WrapPanel();
             foreach (var parent in shown.Parents)
                 parents.Children.Add(Hash(parent, link: true));
-            AddFact(shown.Parents.Count == 1 ? "Parent" : "Parents", parents);
+            AddFact(Strings.DetailsParents(shown.Parents.Count), parents);
         }
 
         if (shown.Refs.Count > 0)
-            AddFact("Refs", new TextBlock { Text = string.Join(", ", shown.Refs.Select(r => r.Name)), TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center });
+            AddFact(Strings.DetailsRefs, new TextBlock { Text = string.Join(", ", shown.Refs.Select(r => r.Name)), TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center });
     }
 
     private void AddFact(string label, Control value)
@@ -214,12 +214,12 @@ internal sealed class CommitDetailsView : DockPanel
         ToolTip.SetTip(text, sha);
         if (text is Button button)
         {
-            ToolTip.SetTip(button, $"Select {sha[..Math.Min(10, sha.Length)]} in the log");
+            ToolTip.SetTip(button, Strings.DetailsSelectInLog(sha[..Math.Min(10, sha.Length)]));
             button.Click += (_, _) => selectCommit(sha);
         }
 
         var copy = new Button { Classes = { "icon", "small" }, Content = new SymbolIcon { Data = Icons.Copy, Size = 12 }, VerticalAlignment = VerticalAlignment.Center };
-        ToolTip.SetTip(copy, "Copy the full hash");
+        ToolTip.SetTip(copy, Strings.DetailsCopyHash);
         copy.Click += (_, _) => _ = CopyAsync(sha);
         return new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Children = { text, copy } };
     }
@@ -250,9 +250,9 @@ internal sealed class CommitDetailsView : DockPanel
         letter[!TextBlock.ForegroundProperty] = new DynamicResourceExtension(brush);
         var row = new StackPanel { Orientation = Orientation.Horizontal, Children = { icon, name } };
         if (change.OldPath is { } old)
-            row.Children.Add(new TextBlock { Text = $"from {old}", Classes = { "caption", "muted" }, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
+            row.Children.Add(new TextBlock { Text = Strings.ChangeRenamedFromShort(old), Classes = { "caption", "muted" }, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
         row.Children.Add(letter);
-        ToolTip.SetTip(row, $"{change.Path}\nDouble-click for the diff");
+        ToolTip.SetTip(row, $"{change.Path}\n{Strings.DetailsDoubleClick}");
         return row;
     }
 

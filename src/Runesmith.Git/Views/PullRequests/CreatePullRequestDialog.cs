@@ -21,12 +21,12 @@ internal sealed class CreatePullRequestDialog : Dialog, IDisposable
     private readonly IDialogService dialogs;
     private readonly PullRequestContext context;
     private readonly ComboBox baseBox = new() { MinWidth = 220, HorizontalAlignment = HorizontalAlignment.Stretch, IsEnabled = false };
-    private readonly TextBox title = new() { PlaceholderText = "Title" };
-    private readonly TextBox body = new() { PlaceholderText = "Describe the change: what it does and why", AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 180, VerticalContentAlignment = VerticalAlignment.Top };
-    private readonly CheckBox draft = new() { Content = "Create as a draft" };
+    private readonly TextBox title = new() { PlaceholderText = Strings.PrTitleLabel };
+    private readonly TextBox body = new() { PlaceholderText = Strings.PrBodyPlaceholder, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 180, VerticalContentAlignment = VerticalAlignment.Top };
+    private readonly CheckBox draft = new() { Content = Strings.PrDraftOption };
     private readonly TextBlock status = Label(null, "TextMutedBrush", 12, wrap: true);
     private readonly SymbolIcon spinner = new() { Data = Icons.RotateCw, Size = 13, Classes = { "spin" }, IsVisible = false, VerticalAlignment = VerticalAlignment.Center };
-    private readonly Button create = new() { Content = "Create Pull Request", Classes = { "accent" }, IsDefault = true, IsEnabled = false };
+    private readonly Button create = new() { Content = Strings.PrCreate, Classes = { "accent" }, IsDefault = true, IsEnabled = false };
     private readonly CancellationTokenSource closing = new();
     private bool titleTyped;
     private bool bodyTyped;
@@ -40,8 +40,8 @@ internal sealed class CreatePullRequestDialog : Dialog, IDisposable
         this.dialogs = dialogs;
         this.context = context;
         GitIcons.Register();
-        Header = "Create Pull Request";
-        Description = $"Ask to merge {context.Repository.Branch} into another branch of {WebLinks.RepositoryName(context.Remote.FetchUrl)} on {context.Host.Name}.";
+        Header = Strings.PrCreate;
+        Description = Strings.PrCreateDescription(branch: context.Repository.Branch ?? "", repository: WebLinks.RepositoryName(context.Remote.FetchUrl), host: context.Host.Name);
         Width = 620;
         ShowCloseButton = true;
         draft.IsVisible = context.Host.SupportsDraftPullRequests;
@@ -55,7 +55,7 @@ internal sealed class CreatePullRequestDialog : Dialog, IDisposable
         var branches = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*"), Children = { baseBox, arrow, head } };
         Grid.SetColumn(arrow, 1);
         Grid.SetColumn(head, 2);
-        var branchLabels = new Grid { ColumnDefinitions = new ColumnDefinitions("*,36,*"), Children = { Label("Base: merge into", "TextSecondaryBrush", 12), Label("From", "TextSecondaryBrush", 12) } };
+        var branchLabels = new Grid { ColumnDefinitions = new ColumnDefinitions("*,36,*"), Children = { Label(Strings.PrBaseLabel, "TextSecondaryBrush", 12), Label(Strings.PrFromLabel, "TextSecondaryBrush", 12) } };
         Grid.SetColumn(branchLabels.Children[1], 2);
 
         var form = new StackPanel
@@ -64,15 +64,15 @@ internal sealed class CreatePullRequestDialog : Dialog, IDisposable
             Children =
             {
                 branchLabels, branches,
-                Spaced(Label("Title", "TextSecondaryBrush", 12), 8), title,
-                Spaced(Label("Description", "TextSecondaryBrush", 12), 8), body,
+                Spaced(Label(Strings.PrTitleLabel, "TextSecondaryBrush", 12), 8), title,
+                Spaced(Label(Strings.PrDescriptionLabel, "TextSecondaryBrush", 12), 8), body,
                 Spaced(draft, 4),
             },
         };
         Content = form;
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        var cancel = new Button { Content = "Cancel", MinWidth = 84, IsCancel = true };
+        var cancel = new Button { Content = Strings.Cancel, MinWidth = 84, IsCancel = true };
         cancel.Click += (_, _) => Close();
         buttons.Children.AddRange([cancel, create]);
         var left = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, MaxWidth = 300, VerticalAlignment = VerticalAlignment.Center, Children = { spinner, status } };
@@ -112,7 +112,7 @@ internal sealed class CreatePullRequestDialog : Dialog, IDisposable
 
     private async Task LoadAsync()
     {
-        SetBusy(true, $"Reading the branches on {context.Host.Name}...");
+        SetBusy(true, Strings.PrReadingBranches(context.Host.Name));
         try
         {
             var (defaultBranch, names) = await service.GetBranchesAsync(context, closing.Token);
@@ -158,9 +158,9 @@ internal sealed class CreatePullRequestDialog : Dialog, IDisposable
         if (needsPush)
         {
             var question = repository.Upstream is null
-                ? $"{context.Host.Name} does not have {repository.Branch} yet. Push it to {context.Remote.Name} first?"
-                : $"{repository.Branch} has {repository.Ahead} commit{(repository.Ahead == 1 ? "" : "s")} that {context.Host.Name} does not have yet. Push them first?";
-            if (!await dialogs.ConfirmAsync("Push the branch first?", question, "Push and Create"))
+                ? Strings.PrPushBranchFirst(host: context.Host.Name, branch: repository.Branch ?? "", remote: context.Remote.Name)
+                : Strings.PrPushCommitsFirst(branch: repository.Branch ?? "", count: repository.Ahead, host: context.Host.Name);
+            if (!await dialogs.ConfirmAsync(Strings.PrPushFirstTitle, question, Strings.PrPushAndCreate))
                 return;
         }
 
@@ -168,11 +168,11 @@ internal sealed class CreatePullRequestDialog : Dialog, IDisposable
         {
             if (needsPush)
             {
-                SetBusy(true, $"Pushing {repository.Branch}...");
+                SetBusy(true, Strings.PrPushing(repository.Branch ?? ""));
                 await service.PushAsync(context, closing.Token);
             }
 
-            SetBusy(true, "Creating the pull request...");
+            SetBusy(true, Strings.PrCreating);
             var created = await context.Host.CreatePullRequestAsync(context.Remote.FetchUrl,
                 new PullRequestDraft(repository.Branch!, baseBranch, title.Text!.Trim(), body.Text?.Trim() ?? "", draft.IsChecked == true), closing.Token);
             Close(created);

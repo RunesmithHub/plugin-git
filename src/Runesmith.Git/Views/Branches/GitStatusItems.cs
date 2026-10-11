@@ -46,14 +46,14 @@ internal sealed class GitStatusItems : IDisposable
             return;
 
         branch.Text = info.Branch ?? (info.Head is { } head ? head[..Math.Min(8, head.Length)] : "HEAD");
-        branch.ToolTip = BranchWidget.Describe(info) + "\nClick for branches";
+        branch.ToolTip = BranchWidget.Describe(info) + "\n" + Strings.StatusClickBranches;
         var counts = BranchPopup.Sync(info.Ahead, info.Behind);
         sync.Text = counts;
         sync.Icon = operations.IsSyncing ? "refresh" : counts.Length == 0 ? "check" : "refresh";
         sync.State = operations.IsSyncing ? StatusBarState.Busy : StatusBarState.Normal;
-        sync.ToolTip = operations.IsSyncing ? "Syncing with the remote..."
-            : info.Upstream is null ? "No upstream branch. Click to fetch every remote"
-            : counts.Length == 0 ? $"Up to date with {info.Upstream}. Click to fetch"
-            : $"{BranchWidget.Describe(info)}\nClick to fetch";
+        sync.ToolTip = operations.IsSyncing ? Strings.SyncSyncing
+            : info.Upstream is null ? Strings.SyncNoUpstream
+            : counts.Length == 0 ? Strings.SyncUpToDate(info.Upstream)
+            : BranchWidget.Describe(info) + "\n" + Strings.StatusClickFetch;
     }
 }

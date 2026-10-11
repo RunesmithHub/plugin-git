@@ -32,16 +32,16 @@ internal sealed class CloneDialog : Dialog, IDisposable
     private readonly TabControl tabs = new() { Padding = new Thickness(0) };
     private readonly Button addAccount;
     private readonly Dictionary<IRepositoryHost, HostPage> pages = [];
-    private readonly TextBox urlBox = new() { PlaceholderText = "https://host/owner/repository.git or git@host:owner/repository.git" };
+    private readonly TextBox urlBox = new() { PlaceholderText = Strings.CloneUrlPlaceholder };
     private readonly TextBlock urlProblem = Label(null, "DangerBrush", 12);
-    private readonly PathField parentField = new() { Mode = PathFieldMode.Folder, DialogTitle = "Choose the folder to clone into" };
-    private readonly TextBox nameBox = new() { PlaceholderText = "folder name" };
+    private readonly PathField parentField = new() { Mode = PathFieldMode.Folder, DialogTitle = Strings.CloneChooseFolder };
+    private readonly TextBox nameBox = new() { PlaceholderText = Strings.CloneFolderPlaceholder };
     private readonly TextBlock targetHint = Label(null, "TextMutedBrush", 12);
     private readonly SymbolIcon targetIcon = new() { Size = 13, VerticalAlignment = VerticalAlignment.Center };
     private readonly ProgressBar progressBar = new() { Minimum = 0, Maximum = 1, Height = 4, MinWidth = 0, Width = 220, IsVisible = false, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock progressText = Label(null, "TextMutedBrush", 12);
-    private readonly Button cloneButton = new() { Content = "Clone", Classes = { "accent" }, IsDefault = true, MinWidth = 96, IsEnabled = false };
-    private readonly Button cancelButton = new() { Content = "Cancel", MinWidth = 84 };
+    private readonly Button cloneButton = new() { Content = Strings.CloneButton, Classes = { "accent" }, IsDefault = true, MinWidth = 96, IsEnabled = false };
+    private readonly Button cancelButton = new() { Content = Strings.Cancel, MinWidth = 84 };
     private readonly CancellationTokenSource closing = new();
     private readonly StackPanel urlPage;
     private IReadOnlyList<CloneSource> sources = [];
@@ -56,7 +56,7 @@ internal sealed class CloneDialog : Dialog, IDisposable
         this.cloner = cloner;
         this.openUrl = openUrl;
         GitIcons.Register();
-        Header = "Clone Repository";
+        Header = Strings.CloneTitle;
         Width = 980;
         Height = 720;
         Padding = new Thickness(0);
@@ -222,16 +222,16 @@ internal sealed class CloneDialog : Dialog, IDisposable
 
     private Button AddAccountButton()
     {
-        var button = IconButton(Icons.Plus, "Add Account", "subtle", "small");
+        var button = IconButton(Icons.Plus, Strings.CloneAddAccount, "subtle", "small");
         button.HorizontalAlignment = HorizontalAlignment.Right;
         button.VerticalAlignment = VerticalAlignment.Top;
         button.Margin = new Thickness(0, 6, 16, 0);
         button.IsVisible = model.Providers.Count > 0;
-        ToolTip.SetTip(button, "Sign in to another account, such as one on another server");
+        ToolTip.SetTip(button, Strings.CloneAddAccountTip);
         var menu = new MenuFlyout { Placement = PlacementMode.BottomEdgeAlignedRight };
         foreach (var provider in model.Providers)
         {
-            var item = new MenuItem { Header = $"{provider.Name} Account...", Icon = new SymbolIcon { Data = GitIcons.Get(provider.Icon), Size = 14 } };
+            var item = new MenuItem { Header = Strings.CloneAccountOf(provider.Name), Icon = new SymbolIcon { Data = GitIcons.Get(provider.Icon), Size = 14 } };
             item.Click += (_, _) => _ = AddAccountAsync(provider);
             menu.Items.Add(item);
         }
@@ -258,8 +258,8 @@ internal sealed class CloneDialog : Dialog, IDisposable
 
     private StackPanel UrlPage()
     {
-        var label = Label("Repository URL", weight: FontWeight.Medium);
-        var hint = Label("HTTPS addresses on a server you are signed in to use that sign-in; every other address uses your own Git setup, such as SSH keys and credential helpers.",
+        var label = Label(Strings.CloneUrlLabel, weight: FontWeight.Medium);
+        var hint = Label(Strings.CloneUrlHint,
             "TextMutedBrush", 12, wrap: true);
         urlProblem.IsVisible = false;
         return new StackPanel { Spacing = 8, Margin = new Thickness(24, 22, 24, 16), MaxWidth = 720, HorizontalAlignment = HorizontalAlignment.Left, Children = { label, urlBox, urlProblem, hint } };
@@ -267,8 +267,8 @@ internal sealed class CloneDialog : Dialog, IDisposable
 
     private Border Destination()
     {
-        var parentLabel = Label("Location", "TextSecondaryBrush");
-        var nameLabel = Label("Folder", "TextSecondaryBrush");
+        var parentLabel = Label(Strings.CloneLocation, "TextSecondaryBrush");
+        var nameLabel = Label(Strings.CloneFolder, "TextSecondaryBrush");
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,12,*,16,Auto,12,220"), RowDefinitions = new RowDefinitions("Auto,6,Auto") };
         grid.Children.AddRange([parentLabel, parentField, nameLabel, nameBox]);
         Grid.SetColumn(parentField, 2);
@@ -298,7 +298,7 @@ internal sealed class CloneDialog : Dialog, IDisposable
         {
             var text = urlBox.Text?.Trim();
             var valid = RepositoryCloner.IsValidUrl(text);
-            urlProblem.Text = string.IsNullOrEmpty(text) || valid ? null : "This is not a Git URL. Use an https, ssh or git address, or user@host:path.";
+            urlProblem.Text = string.IsNullOrEmpty(text) || valid ? null : Strings.CloneUrlInvalid;
             urlProblem.IsVisible = urlProblem.Text is not null;
         }
 
@@ -312,7 +312,7 @@ internal sealed class CloneDialog : Dialog, IDisposable
 
         var target = Target;
         var occupied = target is not null && RepositoryCloner.IsOccupied(target);
-        targetHint.Text = target is null ? "Choose a location and a folder name." : occupied ? $"{target} exists and is not empty; choose another folder." : $"Clones into {target}";
+        targetHint.Text = target is null ? Strings.CloneTargetMissing : occupied ? Strings.CloneTargetOccupied(target) : Strings.CloneTargetHint(target);
         targetIcon.Data = occupied ? Icons.AlertTriangle : Icons.Folder;
         Brush(targetIcon, SymbolIcon.ForegroundProperty, occupied ? "WarningBrush" : "TextMutedBrush");
         Brush(targetHint, TextBlock.ForegroundProperty, occupied ? "WarningBrush" : "TextMutedBrush");
@@ -328,7 +328,7 @@ internal sealed class CloneDialog : Dialog, IDisposable
         operation = cloner.Start(url, target);
         operation.Progress += OnCloneProgress;
         SetCloning(true);
-        ShowProgress($"Cloning into {target}...", null, isError: false);
+        ShowProgress(Strings.CloneProgress(target), null, isError: false);
         try
         {
             await operation.Completion;
@@ -337,7 +337,7 @@ internal sealed class CloneDialog : Dialog, IDisposable
         }
         catch (OperationCanceledException)
         {
-            ShowProgress("The clone was cancelled.", null, isError: false);
+            ShowProgress(Strings.CloneCancelled, null, isError: false);
         }
         catch (GitException exception)
         {
@@ -424,7 +424,7 @@ internal sealed class CloneDialog : Dialog, IDisposable
 
         private readonly CloneDialog dialog;
         private readonly IRepositoryHost host;
-        private readonly SearchBox search = new() { PlaceholderText = "Search repositories by name, owner or description" };
+        private readonly SearchBox search = new() { PlaceholderText = Strings.CloneSearch };
         private readonly WrapPanel ownerChips = new() { ItemSpacing = 6, LineSpacing = 6 };
         private readonly ListBox list = new() { Classes = { "repositories" }, SelectionMode = SelectionMode.Single };
         private readonly ContentControl listStatus = new() { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
@@ -492,7 +492,7 @@ internal sealed class CloneDialog : Dialog, IDisposable
 
             shownFor = account;
             Content = RepositoriesView(account);
-            ShowListStatus(Loading("Loading repositories..."));
+            ShowListStatus(Loading(Strings.CloneLoading));
             list.ItemsSource = null;
             var current = ++generation;
             try
@@ -513,7 +513,7 @@ internal sealed class CloneDialog : Dialog, IDisposable
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 if (current == generation)
-                    ShowListStatus(Message(Icons.AlertTriangle, "The repositories could not be loaded", exception.Message, "Try Again", () => _ = LoadAsync(refresh: true)));
+                    ShowListStatus(Message(Icons.AlertTriangle, Strings.CloneLoadFailed, exception.Message, Strings.TryAgain, () => _ = LoadAsync(refresh: true)));
             }
         }
 
@@ -522,14 +522,14 @@ internal sealed class CloneDialog : Dialog, IDisposable
             var tile = new Border { Width = 56, Height = 56, CornerRadius = new CornerRadius(14), Child = new SymbolIcon { Data = GitIcons.Get(host.Icon), Size = 28, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } };
             Brush(tile, Border.BackgroundProperty, "AccentSubtleBrush");
             Brush((SymbolIcon)tile.Child, SymbolIcon.ForegroundProperty, "AccentBrush");
-            var title = Label($"Clone from your {host.Name} account", fontSize: 16, weight: FontWeight.SemiBold);
-            var hint = Label("Sign in to see the repositories of your account and of the organizations you give Runesmith access to.", "TextSecondaryBrush", wrap: true);
+            var title = Label(Strings.CloneFromAccount(host.Name), fontSize: 16, weight: FontWeight.SemiBold);
+            var hint = Label(Strings.CloneSignInHint, "TextSecondaryBrush", wrap: true);
             hint.TextAlignment = TextAlignment.Center;
             hint.MaxWidth = 380;
-            var signIn = IconButton(GitIcons.Get(host.Icon), $"Sign in to {host.Name}", "accent");
+            var signIn = IconButton(GitIcons.Get(host.Icon), Strings.SignInTo(host.Name), "accent");
             signIn.HorizontalAlignment = HorizontalAlignment.Center;
             signIn.Click += (_, _) => _ = SignInAsync();
-            var url = Link("Or clone any repository by its URL", () => dialog.Select(UrlSource.Instance));
+            var url = Link(Strings.CloneOrByUrl, () => dialog.Select(UrlSource.Instance));
             url.HorizontalAlignment = HorizontalAlignment.Center;
             foreach (var control in new Control[] { tile, title })
                 control.HorizontalAlignment = HorizontalAlignment.Center;
@@ -598,14 +598,14 @@ internal sealed class CloneDialog : Dialog, IDisposable
         {
             Release(search, ownerChips, list, listStatus);
             var refresh = new Button { Classes = { "icon" }, Content = new SymbolIcon { Data = Icons.Refresh, Size = 15 }, VerticalAlignment = VerticalAlignment.Center };
-            ToolTip.SetTip(refresh, "Load the repositories again");
+            ToolTip.SetTip(refresh, Strings.CloneRefreshTip);
             refresh.Click += (_, _) => _ = LoadAsync(refresh: true);
             var tools = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(8, 0, 0, 0), Children = { refresh } };
             if (host.ManageAccessUrl is { } manageUrl)
             {
-                var manage = IconButton(Icons.Shield, "Manage Access");
+                var manage = IconButton(Icons.Shield, Strings.ManageAccess);
                 manage.VerticalAlignment = VerticalAlignment.Center;
-                ToolTip.SetTip(manage, $"Choose which repositories and organizations Runesmith may use, on {host.Name}");
+                ToolTip.SetTip(manage, Strings.ManageAccessTip(host.Name));
                 manage.Click += (_, _) => OpenManageAccess(manageUrl);
                 tools.Children.Add(manage);
             }
@@ -618,7 +618,7 @@ internal sealed class CloneDialog : Dialog, IDisposable
                 Margin = new Thickness(4, 0, 0, 0),
                 Children = { new Avatar(dialog.avatars, account, host.AccountAvatarUrl?.AbsoluteUri, 20), Label(account, "TextSecondaryBrush", 12) },
             };
-            ToolTip.SetTip(who, $"Signed in to {host.Name} as {account}");
+            ToolTip.SetTip(who, Strings.SignedInAs(host: host.Name, account: account));
             tools.Children.Add(who);
 
             var top = new DockPanel { Margin = new Thickness(16, 14, 16, 10), Children = { tools, search } };
@@ -640,7 +640,7 @@ internal sealed class CloneDialog : Dialog, IDisposable
             if (owner is not null && !owners.Any(o => o.Login == owner))
                 owner = null;
 
-            ownerChips.Children.Add(Chip(null, "All", null));
+            ownerChips.Children.Add(Chip(null, Strings.CloneAllOwners, null));
             foreach (var candidate in owners)
                 ownerChips.Children.Add(Chip(candidate.Login, candidate.Login, new Avatar(dialog.avatars, candidate.Login, candidate.AvatarUrl?.AbsoluteUri, 16, candidate.IsOrganization)));
             if (canAdd)
@@ -648,8 +648,8 @@ internal sealed class CloneDialog : Dialog, IDisposable
 
             Button AddChip()
             {
-                var chip = new Button { Classes = { "owner", "add" }, Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { new SymbolIcon { Data = Icons.Plus, Size = 12, VerticalAlignment = VerticalAlignment.Center }, new TextBlock { Text = "Organization", VerticalAlignment = VerticalAlignment.Center } } } };
-                ToolTip.SetTip(chip, $"Let Runesmith use the repositories of another organization on {host.Name}");
+                var chip = new Button { Classes = { "owner", "add" }, Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { new SymbolIcon { Data = Icons.Plus, Size = 12, VerticalAlignment = VerticalAlignment.Center }, new TextBlock { Text = Strings.CloneOrganization, VerticalAlignment = VerticalAlignment.Center } } } };
+                ToolTip.SetTip(chip, Strings.CloneAddOrganizationTip(host.Name));
                 chip.Click += (_, _) => AddOrganization();
                 return chip;
             }
@@ -686,12 +686,12 @@ internal sealed class CloneDialog : Dialog, IDisposable
             if (rows.Count > 0)
                 ShowListStatus(null);
             else if (catalog.Repositories.Count == 0 && host.ManageAccessUrl is { } manageUrl)
-                ShowListStatus(WithAddOrganization(Message(GitIcons.Get(host.Icon), "No repositories yet", "The account has no repositories Runesmith may use. Manage Access chooses more.",
-                    "Manage Access", () => OpenManageAccess(manageUrl))));
+                ShowListStatus(WithAddOrganization(Message(GitIcons.Get(host.Icon), Strings.CloneNoRepositories, Strings.CloneNoRepositoriesAccess,
+                    Strings.ManageAccess, () => OpenManageAccess(manageUrl))));
             else if (catalog.Repositories.Count == 0)
-                ShowListStatus(Message(GitIcons.Get(host.Icon), "No repositories yet", "The account has no repositories yet.", null, null));
+                ShowListStatus(Message(GitIcons.Get(host.Icon), Strings.CloneNoRepositories, Strings.CloneNoRepositoriesHint, null, null));
             else
-                ShowListStatus(Message(Icons.Search, "No repositories match", "Try other words, or show every owner.", null, null));
+                ShowListStatus(Message(Icons.Search, Strings.CloneNoMatch, Strings.CloneNoMatchHint, null, null));
             dialog.UpdateTarget();
         }
 
@@ -699,7 +699,7 @@ internal sealed class CloneDialog : Dialog, IDisposable
         {
             if (dialog.model.CanAddOrganization(host))
             {
-                var add = Link("Add an organization...", AddOrganization);
+                var add = Link(Strings.CloneAddOrganization, AddOrganization);
                 add.HorizontalAlignment = HorizontalAlignment.Center;
                 message.Children.Add(add);
             }
@@ -743,7 +743,7 @@ internal sealed class CloneDialog : Dialog, IDisposable
         private StackPanel OwnerView(OwnerRow group)
         {
             var name = Label(group.Owner.Login, "TextSecondaryBrush", 12, FontWeight.SemiBold);
-            var kind = Label(group.IsAccount ? "Your account" : group.Owner.IsOrganization ? "Organization" : "User", "TextMutedBrush", 11);
+            var kind = Label(group.IsAccount ? Strings.CloneOwnerYou : group.Owner.IsOrganization ? Strings.CloneOrganization : Strings.CloneOwnerUser, "TextMutedBrush", 11);
             var count = Label(group.Count.ToString(System.Globalization.CultureInfo.InvariantCulture), "TextDisabledBrush", 11);
             return new StackPanel
             {
@@ -758,14 +758,14 @@ internal sealed class CloneDialog : Dialog, IDisposable
         private Grid RepositoryView(HostedRepository repository)
         {
             var name = Label(repository.Name, weight: FontWeight.SemiBold);
-            var visibility = new Badge { Content = repository.IsPrivate ? PrivateLabel() : "Public", Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+            var visibility = new Badge { Content = repository.IsPrivate ? PrivateLabel() : Strings.RepositoryPublic, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
             var badges = new StackPanel { Orientation = Orientation.Horizontal, Children = { visibility } };
             if (repository.IsFork)
-                badges.Children.Add(new Badge { Content = "Fork", Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
+                badges.Children.Add(new Badge { Content = Strings.RepositoryFork, Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
             if (repository.IsArchived)
-                badges.Children.Add(new Badge { Content = "Archived", Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
+                badges.Children.Add(new Badge { Content = Strings.RepositoryArchived, Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
             var titleLine = new StackPanel { Orientation = Orientation.Horizontal, Children = { name, badges } };
-            var description = Label(string.IsNullOrWhiteSpace(repository.Description) ? "No description" : repository.Description, "TextMutedBrush", 12);
+            var description = Label(string.IsNullOrWhiteSpace(repository.Description) ? Strings.RepositoryNoDescription : repository.Description, "TextMutedBrush", 12);
             var text = new StackPanel { Spacing = 3, VerticalAlignment = VerticalAlignment.Center, Children = { titleLine, description } };
 
             var facts = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 4, 0) };
@@ -780,7 +780,7 @@ internal sealed class CloneDialog : Dialog, IDisposable
             var updated = Label(Ago(repository.UpdatedAt, DateTimeOffset.UtcNow), "TextMutedBrush", 12);
             updated.MinWidth = 84;
             updated.TextAlignment = TextAlignment.Right;
-            ToolTip.SetTip(updated, repository.UpdatedAt is { } changed ? $"Updated {changed.ToLocalTime():g}" : null);
+            ToolTip.SetTip(updated, repository.UpdatedAt is { } changed ? Strings.RepositoryUpdated(changed.ToLocalTime().ToString("g", System.Globalization.CultureInfo.CurrentCulture)) : null);
             facts.Children.Add(updated);
 
             var avatar = new Avatar(dialog.avatars, repository.Owner, repository.OwnerAvatarUrl?.AbsoluteUri, 30, repository.OwnerIsOrganization);
@@ -796,7 +796,7 @@ internal sealed class CloneDialog : Dialog, IDisposable
         {
             Orientation = Orientation.Horizontal,
             Spacing = 3,
-            Children = { new SymbolIcon { Data = Icons.Lock, Size = 10, StrokeThickness = 2.4, VerticalAlignment = VerticalAlignment.Center }, new TextBlock { Text = "Private" } },
+            Children = { new SymbolIcon { Data = Icons.Lock, Size = 10, StrokeThickness = 2.4, VerticalAlignment = VerticalAlignment.Center }, new TextBlock { Text = Strings.RepositoryPrivate } },
         };
 
         private void OnSearchKeyDown(object? sender, KeyEventArgs e)

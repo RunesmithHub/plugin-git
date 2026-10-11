@@ -26,19 +26,19 @@ internal sealed class PullRequestActions(
     {
         if (service.Current is not { } context)
         {
-            Notify(NotificationKind.Info, "No hosted repository", "Open a folder whose Git repository has a remote on a hosting service, such as GitHub, to create a pull request.");
+            Notify(NotificationKind.Info, Strings.PrNoHostedRepository, Strings.PrNoHostedRepositoryCreate);
             return;
         }
 
         if (context.Repository.Branch is null)
         {
-            Notify(NotificationKind.Info, "No branch to propose", "HEAD is detached. Switch to a branch, or create one, first.");
+            Notify(NotificationKind.Info, Strings.PrNoBranch, Strings.PrNoBranchMessage);
             return;
         }
 
         if (dialogs is null)
         {
-            Notify(NotificationKind.Error, "Pull requests need a newer Runesmith", "This version of Runesmith does not let plugins show dialogs.");
+            Notify(NotificationKind.Error, Strings.PrNeedsDialogs, Strings.CloneNeedsDialogsMessage);
             return;
         }
 
@@ -47,7 +47,7 @@ internal sealed class PullRequestActions(
 
         if (await dialogs.ShowAsync(new CreatePullRequestDialog(service, dialogs, context)) is PullRequest created)
         {
-            Notify(NotificationKind.Success, FormattableString.Invariant($"Pull request #{created.Number} created"), created.Title, "Open in Browser", () => OpenUrl(created.WebUrl));
+            Notify(NotificationKind.Success, Strings.PrCreated(Number(created.Number)), created.Title, Strings.OpenInBrowser, () => OpenUrl(created.WebUrl));
             Created?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -60,18 +60,18 @@ internal sealed class PullRequestActions(
             return;
 
         using var cancel = new CancellationTokenSource();
-        using var task = tasks?.Start(FormattableString.Invariant($"Checking out pull request #{pullRequest.Number}"), cancel.Cancel);
+        using var task = tasks?.Start(Strings.PrCheckingOut(Number(pullRequest.Number)), cancel.Cancel);
         try
         {
             var branch = await service.CheckoutAsync(context, pullRequest, cancel.Token);
-            Notify(NotificationKind.Success, $"Switched to {branch}", FormattableString.Invariant($"Pull request #{pullRequest.Number}: {pullRequest.Title}"));
+            Notify(NotificationKind.Success, Strings.PrSwitched(branch), Strings.PrNumbered(number: Number(pullRequest.Number), title: pullRequest.Title));
         }
         catch (OperationCanceledException) when (cancel.IsCancellationRequested)
         {
         }
         catch (GitException exception)
         {
-            Notify(NotificationKind.Error, FormattableString.Invariant($"Pull request #{pullRequest.Number} could not be checked out"), exception.Message);
+            Notify(NotificationKind.Error, Strings.PrCheckoutFailed(Number(pullRequest.Number)), exception.Message);
         }
     }
 
@@ -98,8 +98,10 @@ internal sealed class PullRequestActions(
         if (launcher is not null)
             launcher.OpenUrl(url);
         else
-            notifications?.Notify(NotificationKind.Info, "Open this address in a browser", url.AbsoluteUri);
+            notifications?.Notify(NotificationKind.Info, Strings.OpenAddressInBrowser, url.AbsoluteUri);
     }
+
+    private static string Number(int number) => number.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     private void Notify(NotificationKind kind, string title, string? message, string? actionText = null, Action? action = null) =>
         notifications?.Notify(kind, title, message, actionText, action);

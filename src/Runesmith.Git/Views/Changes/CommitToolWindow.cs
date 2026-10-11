@@ -42,7 +42,7 @@ internal sealed class CommitToolWindow : IToolWindowProvider
         repositories.Changed += (_, _) => UpdateBadge(repositories);
     }
 
-    public ToolWindowDefinition Definition { get; } = new(GitOperations.CommitWindowId, "Commit", GitIcons.Commit, DockSide.Left) { Order = 10 };
+    public ToolWindowDefinition Definition => new(GitOperations.CommitWindowId, Strings.WindowCommit, GitIcons.Commit, DockSide.Left) { Order = 10 };
 
     public Control CreateContent() => new CommitView(operations, settings, commands, editors, languages, launcher);
 

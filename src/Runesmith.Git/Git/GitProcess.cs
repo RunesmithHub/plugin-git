@@ -6,7 +6,7 @@ namespace Runesmith.Git.Git;
 
 /// <summary>Thrown when a Git command fails; its message is Git's own, without its <c>fatal:</c> and <c>error:</c> prefixes.</summary>
 internal sealed class GitException(GitResult result, IReadOnlyList<string> arguments)
-    : Exception(MessageOf(result) is { Length: > 0 } message ? message : $"git {(arguments.Count > 0 ? arguments[0] : "")} failed with exit code {result.ExitCode}.")
+    : Exception(MessageOf(result) is { Length: > 0 } message ? message : Strings.GitFailed(command: arguments.Count > 0 ? arguments[0] : "", code: result.ExitCode))
 {
     public GitResult Result { get; } = result;
 
@@ -80,7 +80,7 @@ internal static class GitProcess
         }
         catch (System.ComponentModel.Win32Exception exception)
         {
-            throw new GitException(new GitResult(-1, "", $"Git could not be started: {exception.Message}. Install Git and make sure it is on the PATH."), arguments);
+            throw new GitException(new GitResult(-1, "", Strings.GitNotStarted(exception.Message)), arguments);
         }
 
         using var registration = cancellationToken.Register(() =>

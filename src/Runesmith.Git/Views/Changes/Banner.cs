@@ -33,7 +33,7 @@ internal sealed class Banner : Border
         Margin = new Thickness(8, 6, 8, 2);
         IsVisible = false;
         message[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextSecondaryBrush");
-        ToolTip.SetTip(close, "Dismiss");
+        ToolTip.SetTip(close, Strings.Dismiss);
         close.Click += (_, _) => Hide();
         var text = new StackPanel { Spacing = 2, Children = { title, message, actions } };
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*,Auto") };

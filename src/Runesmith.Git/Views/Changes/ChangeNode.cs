@@ -94,10 +94,10 @@ internal sealed class ChangeNode : INotifyPropertyChanged
         ArgumentNullException.ThrowIfNull(status);
         ArgumentNullException.ThrowIfNull(collapsed);
         var groups = new List<ChangeNode>();
-        Add(ChangeGroup.Conflicts, "Conflicts", status.Conflicts);
-        Add(ChangeGroup.Staged, "Staged", status.Staged);
-        Add(ChangeGroup.Unstaged, "Changes", status.Unstaged);
-        Add(ChangeGroup.Untracked, "Untracked Files", status.Untracked);
+        Add(ChangeGroup.Conflicts, Strings.GroupConflicts, status.Conflicts);
+        Add(ChangeGroup.Staged, Strings.DiffStaged, status.Staged);
+        Add(ChangeGroup.Unstaged, Strings.GroupChanges, status.Unstaged);
+        Add(ChangeGroup.Untracked, Strings.GroupUntracked, status.Untracked);
         return groups;
 
         void Add(ChangeGroup group, string title, IEnumerable<StatusEntry> entries)

@@ -62,7 +62,7 @@ internal sealed class CloneService(
     private async Task RunAsync(CloneOperation operation, string url, string target)
     {
         var name = Path.GetFileName(target);
-        using var task = tasks?.Start($"Cloning {name}", operation.Cancel);
+        using var task = tasks?.Start(Strings.TaskCloning(name), operation.Cancel);
         try
         {
             var credentialsForUrl = await credentials.GetAsync(url, operation.Token).ConfigureAwait(false);
@@ -75,7 +75,7 @@ internal sealed class CloneService(
         }
         catch (GitException exception) when (!operation.IsWatched)
         {
-            notifications?.Notify(NotificationKind.Error, $"{name} could not be cloned", exception.Message);
+            notifications?.Notify(NotificationKind.Error, Strings.CloneFailed(name), exception.Message);
             throw;
         }
 

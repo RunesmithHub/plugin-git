@@ -39,10 +39,10 @@ internal static class BranchRows
         var locals = refs.Where(r => r.Kind == RefKind.LocalBranch && Matches(r.Name)).ToList();
         var recentRows = recent.Select(name => locals.FirstOrDefault(r => r.Name == name)).OfType<GitRef>().Where(r => !r.IsHead).Take(RecentCount).ToList();
         if (text.Length == 0 && recentRows.Count > 0 && locals.Count > RecentCount)
-            Group("Recent", recentRows, isRecent: true);
-        Group("Local", locals.OrderByDescending(r => r.IsHead).ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase), isRecent: false);
-        Group("Remote", refs.Where(r => r.Kind == RefKind.RemoteBranch && Matches(r.Name)).OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase), isRecent: false);
-        Group("Tags", refs.Where(r => r.Kind == RefKind.Tag && Matches(r.Name)).OrderByDescending(r => r.Date).Take(text.Length == 0 ? NewestTags : int.MaxValue), isRecent: false);
+            Group(Strings.GroupRecent, recentRows, isRecent: true);
+        Group(Strings.GroupLocal, locals.OrderByDescending(r => r.IsHead).ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase), isRecent: false);
+        Group(Strings.GroupRemote, refs.Where(r => r.Kind == RefKind.RemoteBranch && Matches(r.Name)).OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase), isRecent: false);
+        Group(Strings.GroupTags, refs.Where(r => r.Kind == RefKind.Tag && Matches(r.Name)).OrderByDescending(r => r.Date).Take(text.Length == 0 ? NewestTags : int.MaxValue), isRecent: false);
         return rows;
 
         void Group(string title, IEnumerable<GitRef> members, bool isRecent)

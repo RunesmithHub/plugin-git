@@ -19,22 +19,23 @@ internal sealed class GitSettings : ISettingContributor
 
     private const string Category = "Git";
 
-    public IEnumerable<SettingDefinition> Settings { get; } =
+    public IEnumerable<SettingDefinition> Settings =>
     [
-        new(PullStrategy, "Pull strategy", Category, "gitConfig")
+        new(PullStrategy, Strings.SettingPullStrategy, Category, "gitConfig")
         {
-            Description = "How Update Project brings in the upstream's commits: as your Git configuration's pull.rebase says (merging when it says nothing), by rebasing your commits on them, or with a merge.",
+            Description = Strings.SettingPullStrategyDescription,
             Choices = ["gitConfig", "rebase", "merge"],
+            ChoiceTitles = [Strings.SettingPullStrategyGitConfig, Strings.SettingPullStrategyRebase, Strings.SettingPullStrategyMerge],
         },
-        new(AutoFetchMinutes, "Fetch automatically every (minutes)", Category, 0)
+        new(AutoFetchMinutes, Strings.SettingAutoFetch, Category, 0)
         {
-            Description = "Fetches every remote in the background, so the branch widget shows what there is to pull; 0 turns it off.",
+            Description = Strings.SettingAutoFetchDescription,
             Minimum = 0,
             Maximum = 1440,
         },
-        new(SubjectLength, "Commit subject length hint", Category, 72)
+        new(SubjectLength, Strings.SettingSubjectLength, Category, 72)
         {
-            Description = "The commit message box shows the subject's length once it is longer than this.",
+            Description = Strings.SettingSubjectLengthDescription,
             Minimum = 20,
             Maximum = 200,
         },

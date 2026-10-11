@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Git in Runesmith: changes, commits, branches, history, diffs, change markers, cloning, and pull requests on the hosting services' plugins.</Description>
+    <!-- Flags text users see that is written in the code instead of locales/en. -->
+    <RunesmithLocalize>true</RunesmithLocalize>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Runesmith.Git.Contracts\Runesmith.Git.Contracts.csproj" />
