@@ -20,6 +20,12 @@ The [Git documentation](https://docs.runesmith.dev/plugins/git) describes each p
 
 Install it from Runesmith's plugin manager, or from [hub.runesmith.dev](https://hub.runesmith.dev). Git must be installed and on the `PATH`.
 
+## Translations
+
+The plugin's text is in English in `src/Runesmith.Git/locales/en/runesmith.git.ftl`, a [Fluent](https://projectfluent.org) file. Text for
+a new message goes there, and the code reads it from the generated `Strings` class. A language pack translates the file; see
+[Language packs](https://docs.runesmith.dev/plugins/language-packs). Git's own messages are shown as Git writes them.
+
 ## Build and test
 
 You need the .NET SDK that `global.json` names. Runesmith's packages come from the plugin hub's feed, which `nuget.config` sets up.
