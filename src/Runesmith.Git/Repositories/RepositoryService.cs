@@ -1,8 +1,8 @@
 using System.Composition;
 using Avalonia.Threading;
+using Runesmith.Git.Contracts;
 using Runesmith.Git.Git;
 using Runesmith.Sdk.Messaging;
-using Runesmith.Sdk.VersionControl;
 using Runesmith.Sdk.Workspace;
 
 namespace Runesmith.Git.Repositories;

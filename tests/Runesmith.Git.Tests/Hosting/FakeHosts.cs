@@ -1,4 +1,4 @@
-using Runesmith.Sdk.VersionControl;
+using Runesmith.Git.Contracts;
 
 namespace Runesmith.Git.Tests.Hosting;
 

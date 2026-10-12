@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Text;
-using Runesmith.Sdk.VersionControl;
+using Runesmith.Git.Contracts;
 
 namespace Runesmith.Git.Git;
 

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "runesmith.git",
   "name": "Git",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "summary": "Changes, commits, branches, history, diffs, change markers, cloning and pull requests with Git.",
   "authors": [
     "Dylan de Beer"
@@ -10,7 +10,7 @@
   "license": "Apache-2.0",
   "repository": "https://github.com/RunesmithHub/plugin-git",
   "homepage": "https://docs.runesmith.dev/plugins/git",
-  "runesmithApi": "^0.1.2",
+  "runesmithApi": "^0.2.0",
   "projects": {
     "contracts": "src/Runesmith.Git.Contracts/Runesmith.Git.Contracts.csproj",
     "implementation": "src/Runesmith.Git/Runesmith.Git.csproj"
@@ -43,6 +43,8 @@
   ],
   "keywords": [
     "git",
+    "gitignore",
+    "patch",
     "commit",
     "branch",
     "diff"

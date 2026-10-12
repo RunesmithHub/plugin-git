@@ -6,8 +6,8 @@ using HammerUI;
 using HammerUI.Controls;
 using HammerUI.Services;
 using Runesmith.Git.Commands;
+using Runesmith.Git.Contracts;
 using Runesmith.Git.Hosting;
-using Runesmith.Sdk.VersionControl;
 using static Runesmith.Git.Views.ViewHelpers;
 
 namespace Runesmith.Git.Views.PullRequests;

@@ -9,10 +9,10 @@ using Avalonia.Threading;
 using HammerUI;
 using HammerUI.Controls;
 using Runesmith.Git.Commands;
+using Runesmith.Git.Contracts;
 using Runesmith.Git.Hosting;
 using Runesmith.Sdk.Localization;
 using Runesmith.Sdk.ToolWindows;
-using Runesmith.Sdk.VersionControl;
 using static Runesmith.Git.Views.ViewHelpers;
 
 namespace Runesmith.Git.Views.PullRequests;

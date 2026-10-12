@@ -14,6 +14,10 @@
     <PackageReference Include="HammerUI" ExcludeAssets="runtime" />
     <PackageReference Include="Avalonia" ExcludeAssets="runtime" />
   </ItemGroup>
+  <!-- The TextMate grammars of Git's own files ship beside the assembly, where GrammarFiles finds them. -->
+  <ItemGroup>
+    <None Include="grammars\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Runesmith.Git.Tests" />
   </ItemGroup>
