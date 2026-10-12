@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>The public API of the Git plugin, for plugins that depend on it. Empty while the plugin offers none.</Description>
+    <Description>The public API of the Git plugin, for plugins that depend on it: the open folder's repository, running Git, and the contracts hosting plugins such as GitHub implement.</Description>
   </PropertyGroup>
 </Project>

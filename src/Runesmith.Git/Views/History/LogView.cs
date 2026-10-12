@@ -12,13 +12,13 @@ using Avalonia.Threading;
 using HammerUI;
 using HammerUI.Controls;
 using Runesmith.Git.Commands;
+using Runesmith.Git.Contracts;
 using Runesmith.Git.Git;
 using Runesmith.Git.Hosting;
 using Runesmith.Git.Repositories;
 using Runesmith.Sdk.Languages;
 using Runesmith.Sdk.Localization;
 using Runesmith.Sdk.Shell;
-using Runesmith.Sdk.VersionControl;
 
 namespace Runesmith.Git.Views.History;
 

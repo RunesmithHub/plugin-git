@@ -1,9 +1,9 @@
+using Runesmith.Git.Contracts;
 using Runesmith.Git.Git;
 using Runesmith.Git.Hosting;
 using Runesmith.Git.Tests.Git;
 using Runesmith.Git.Tests.Hosting;
 using Runesmith.Git.Views.PullRequests;
-using Runesmith.Sdk.VersionControl;
 
 namespace Runesmith.Git.Tests.Views;
 

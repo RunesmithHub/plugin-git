@@ -1,9 +1,9 @@
 using System.Composition;
 using HammerUI.Services;
+using Runesmith.Git.Contracts;
 using Runesmith.Git.Git;
 using Runesmith.Sdk.Shell;
 using Runesmith.Sdk.Tasks;
-using Runesmith.Sdk.VersionControl;
 
 namespace Runesmith.Git.Views.PullRequests;
 

@@ -9,8 +9,6 @@ internal sealed class FakeWorkspace : IWorkspace
 
     public string? Name => RootPath is null ? null : Path.GetFileName(RootPath);
 
-    public IReadOnlyList<string> Solutions => [];
-
     public event EventHandler? Changed;
 
     public void Open(string? folder)

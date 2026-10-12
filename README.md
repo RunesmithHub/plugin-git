@@ -3,7 +3,7 @@
 The official Git plugin for [Runesmith](https://github.com/RunesmithHub/Runesmith), `runesmith.git`: the Commit window, branches, fetch,
 pull and push, the log and its graph, diffs, change markers in the editor, cloning, links to hosting services and pull requests. It runs
 the `git` command line, so your configuration, hooks, signing keys, SSH setup and credential helpers keep working. Hosting services such as
-GitHub, Gitea and Forgejo are plugins on top of it.
+GitHub, Gitea and Forgejo are plugins on top of it. It also brings highlighting for Git's own files: `.gitignore`, `.diff` and `.patch`.
 
 The [Git documentation](https://docs.runesmith.dev/plugins/git) describes each part and its settings.
 

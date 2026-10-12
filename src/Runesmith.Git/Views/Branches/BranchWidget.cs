@@ -8,10 +8,10 @@ using Avalonia.Media;
 using HammerUI;
 using HammerUI.Controls;
 using Runesmith.Git.Commands;
+using Runesmith.Git.Contracts;
 using Runesmith.Git.Repositories;
 using Runesmith.Sdk.Commands;
 using Runesmith.Sdk.Shell;
-using Runesmith.Sdk.VersionControl;
 
 namespace Runesmith.Git.Views.Branches;
 

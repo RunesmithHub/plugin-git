@@ -13,9 +13,9 @@ using HammerUI;
 using HammerUI.Controls;
 using Runesmith.Git.Clone;
 using Runesmith.Git.Commands;
+using Runesmith.Git.Contracts;
 using Runesmith.Git.Git;
 using Runesmith.Git.Hosting;
-using Runesmith.Sdk.VersionControl;
 using static Runesmith.Git.Views.ViewHelpers;
 
 namespace Runesmith.Git.Views.Clone;

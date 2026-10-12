@@ -767,3 +767,10 @@ pr-copy-link = Copy Link
 git-failed = git { $command } failed with exit code { $code }.
 # $reason is the system's own message.
 git-not-started = Git could not be started: { $reason }. Install Git and make sure it is on the PATH.
+
+## New projects.
+
+# The toggle in the New Project dialog.
+project-create-repository = Create Git repository
+# Shown in the New Project dialog while git init runs.
+project-creating-repository = Creating the Git repository...

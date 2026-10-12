@@ -3,13 +3,13 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
 using Runesmith.Git.Commands;
+using Runesmith.Git.Contracts;
 using Runesmith.Git.Views;
 using Runesmith.Git.Views.Clone;
 using Runesmith.Git.Views.PullRequests;
 using Runesmith.Sdk.Commands;
 using Runesmith.Sdk.Documents;
 using Runesmith.Sdk.Shell;
-using Runesmith.Sdk.VersionControl;
 
 namespace Runesmith.Git.Hosting;
 

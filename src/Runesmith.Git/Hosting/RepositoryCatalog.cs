@@ -1,5 +1,5 @@
 using System.Composition;
-using Runesmith.Sdk.VersionControl;
+using Runesmith.Git.Contracts;
 
 namespace Runesmith.Git.Hosting;
 
