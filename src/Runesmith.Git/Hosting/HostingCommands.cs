@@ -38,12 +38,13 @@ internal sealed class HostingCommands(
         ArgumentNullException.ThrowIfNull(registry);
         GitIcons.Register();
 
-        registry.Add(new CommandDefinition(CommandIds.CloneRepository, Strings.CommandClone, Category)
+        registry.Add(new CommandDefinition(GitCommandIds.CloneRepository, Strings.CommandClone, Category)
         {
             Icon = "import",
             Description = Strings.CommandCloneDescription,
         }, CloneAsync);
-        registry.AddMenuItem(new MenuItemDefinition(Menus.File, CommandIds.CloneRepository, "1-new", 10));
+        registry.AddMenuItem(new MenuItemDefinition(Menus.File, GitCommandIds.CloneRepository, "1-new", 10));
+        registry.AddMenuItem(new MenuItemDefinition(ContextMenus.Project, GitCommandIds.CloneRepository));
 
         registry.Add(new CommandDefinition(CreatePullRequest, Strings.CommandCreatePullRequest, Category)
         {

@@ -63,22 +63,22 @@
       },
       "Runesmith.Sdk": {
         "type": "Direct",
-        "requested": "[0.2.0, )",
-        "resolved": "0.2.0",
-        "contentHash": "iDjxhU1Io8794T+lS6w25BamFvLCfm4CWEZCGwLRnmURlkrcZrO12NMZrfBiguenKeCv/qvWWLC+PhDdQo81/A==",
+        "requested": "[0.2.1, )",
+        "resolved": "0.2.1",
+        "contentHash": "4l2EJsSmS9TbVGktePt558RoSG67dTPAngJbhc0Y6YoMIiCjUgWsFx4PbC4XGuhQqtaXAHsbyY7RivmcTiih1A==",
         "dependencies": {
           "Avalonia": "12.1.4",
           "Avalonia.Fonts.Inter": "12.1.4",
           "HammerUI": "0.1.1",
-          "Runesmith.Text": "0.2.0",
+          "Runesmith.Text": "0.2.1",
           "System.Composition.AttributedModel": "10.0.12"
         }
       },
       "Runesmith.Text": {
         "type": "Direct",
-        "requested": "[0.2.0, )",
-        "resolved": "0.2.0",
-        "contentHash": "kH6PGoaEYbYcCERVVoqMfZTnsziJyRB2j8AusN7c9d6gH3mxNChxguuNXGPrLqEvQK+6VPC4RX7UiKjsDGdyIw=="
+        "requested": "[0.2.1, )",
+        "resolved": "0.2.1",
+        "contentHash": "9tB90AVBk1EPXc/3DyQsyzOZm6t1Sm/mW5mIz9cTDQHh1xSDRrBIRDslAodHYemYYQRmq7bBPmOs05vB1OzN2Q=="
       },
       "xunit.runner.visualstudio": {
         "type": "Direct",
@@ -320,9 +320,9 @@
         "dependencies": {
           "Avalonia": "[12.1.4, )",
           "HammerUI": "[0.1.1, )",
-          "Runesmith.Git.Contracts": "[0.2.0, )",
-          "Runesmith.Sdk": "[0.2.0, )",
-          "Runesmith.Text": "[0.2.0, )"
+          "Runesmith.Git.Contracts": "[0.2.1, )",
+          "Runesmith.Sdk": "[0.2.1, )",
+          "Runesmith.Text": "[0.2.1, )"
         }
       },
       "runesmith.git.contracts": {
